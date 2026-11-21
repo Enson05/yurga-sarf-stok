@@ -1,0 +1,2765 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yurga Yemlik — Online Sarf Stok Yönetim Sistemi</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        yurgaNavy: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            500: '#10b981',
+                            700: '#047857',
+                            800: '#065f46',
+                            900: '#064e3b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Bildirim Kutusu (Toast) -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-24 opacity-0 transition-all duration-300 pointer-events-none no-print">
+        <div id="toast-box" class="bg-emerald-900 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 border border-emerald-700">
+            <span id="toast-icon-wrap" class="flex-shrink-0"><i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-300"></i></span>
+            <span id="toast-message" class="text-sm font-medium">İşlem başarıyla tamamlandı.</span>
+        </div>
+    </div>
+
+    <!-- Üst Kurumsal Başlık (Header - Yeşil Tema) -->
+    <header class="bg-emerald-700 text-white shadow-md border-b-4 border-emerald-500 sticky top-0 z-30">
+        <div class="max-w-[1440px] mx-auto px-3 sm:px-5 py-3.5">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                
+                <!-- Firma Logosu ve Başlık -->
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-xl bg-emerald-500/30 border border-emerald-300/40 flex items-center justify-center shadow-inner flex-shrink-0">
+                        <i data-lucide="boxes" class="w-6 h-6 text-emerald-100"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h1 class="text-lg sm:text-xl font-extrabold tracking-tight text-white">
+                                YURGA YEMLİK
+                            </h1>
+                            <span class="px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider bg-emerald-600/80 text-emerald-100 border border-emerald-400/50 rounded-md">
+                                Online Sarf Stok Yönetim Sistemi
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2.5 mt-1 text-xs text-emerald-100">
+                            <!-- Canlı Senkronizasyon Göstergesi -->
+                            <span id="syncStatus" class="inline-flex items-center gap-1.5 text-amber-200 font-medium">
+                                <span class="w-2 h-2 rounded-full bg-amber-300 animate-ping"></span>
+                                Buluta Bağlanıyor...
+                            </span>
+                            <span class="text-emerald-400">|</span>
+                            <span class="flex items-center gap-1">
+                                <i data-lucide="calendar" class="w-3.5 h-3.5 text-emerald-200"></i>
+                                <span id="currentDateDisplay">--.--.----</span>
+                            </span>
+                            <span class="hidden sm:inline text-emerald-400">|</span>
+                            <span class="hidden sm:inline text-emerald-200" id="userBadge">Oturum: Başlatılıyor...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hızlı Aksiyon Butonları -->
+                <div class="flex flex-wrap items-center gap-2 no-print">
+                    <button onclick="openAddMaterialModal()" class="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-emerald-50 text-emerald-900 text-xs font-extrabold rounded-lg shadow-sm transition cursor-pointer">
+                        <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-600"></i>
+                        <span>Yeni Malzeme Ekle</span>
+                    </button>
+                    <button onclick="openQuickTransactionModal('IN')" class="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold rounded-lg border border-emerald-500/40 shadow-sm transition cursor-pointer">
+                        <i data-lucide="arrow-down-left" class="w-4 h-4 text-emerald-300"></i>
+                        <span>Hızlı Stok Girişi</span>
+                    </button>
+                    <button onclick="openQuickTransactionModal('OUT')" class="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg shadow-sm transition cursor-pointer">
+                        <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+                        <span>Hızlı Stok Çıkışı</span>
+                    </button>
+                    <button onclick="exportInventoryCSV()" class="inline-flex items-center gap-1.5 px-2.5 py-2 bg-emerald-800/70 hover:bg-emerald-800 text-emerald-50 text-xs font-semibold rounded-lg border border-emerald-500/40 transition cursor-pointer" title="Mevcut Stok Listesini Excel/CSV Olarak İndir">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-200"></i>
+                        <span class="hidden sm:inline">Excel / CSV</span>
+                    </button>
+                    <button onclick="window.print()" class="inline-flex items-center gap-1.5 px-2.5 py-2 bg-emerald-800/70 hover:bg-emerald-800 text-emerald-50 text-xs font-semibold rounded-lg border border-emerald-500/40 transition cursor-pointer" title="Sayfayı Yazdır">
+                        <i data-lucide="printer" class="w-4 h-4 text-emerald-200"></i>
+                        <span class="hidden md:inline">Yazdır</span>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+    <!-- Ana İçerik Alanı -->
+    <main class="flex-grow max-w-[1440px] w-full mx-auto px-3 sm:px-5 py-5 space-y-5">
+
+        <!-- KPI Özet Kartları -->
+        <section class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <!-- KPI 1: Toplam Malzeme Çeşidi -->
+            <div onclick="setStatusFilter('ALL')" class="bg-white rounded-xl p-3.5 border border-emerald-200/80 shadow-xs hover:shadow-md transition cursor-pointer relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Malzeme Çeşidi</span>
+                    <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                        <i data-lucide="layers" class="w-4 h-4"></i>
+                    </div>
+                </div>
+                <div class="mt-1.5 flex items-baseline gap-2">
+                    <span id="kpiTotalItems" class="text-xl font-extrabold text-emerald-900">0</span>
+                    <span class="text-xs font-medium text-slate-500">Kalem</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-0.5">Aktif depo envanter kaydı</p>
+            </div>
+
+            <!-- KPI 2: Toplam Mevcut Stok -->
+            <div onclick="setStatusFilter('ALL')" class="bg-white rounded-xl p-3.5 border border-emerald-200/80 shadow-xs hover:shadow-md transition cursor-pointer relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Toplam Mevcut Stok</span>
+                    <div class="w-7 h-7 rounded-lg bg-teal-100 text-teal-700 flex items-center justify-center">
+                        <i data-lucide="package-check" class="w-4 h-4"></i>
+                    </div>
+                </div>
+                <div class="mt-1.5 flex items-baseline gap-2">
+                    <span id="kpiTotalQty" class="text-xl font-extrabold text-slate-900">0</span>
+                    <span class="text-xs font-medium text-slate-500">Adet</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-0.5">Raflardaki toplam miktar</p>
+            </div>
+
+            <!-- KPI 3: Toplam Stok Değeri (KDV Hariç & Dahil) -->
+            <div class="bg-white rounded-xl p-3.5 border border-emerald-200/80 shadow-xs hover:shadow-md transition relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Toplam Stok Değeri</span>
+                    <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                        <i data-lucide="banknote" class="w-4 h-4"></i>
+                    </div>
+                </div>
+                <div class="mt-1.5">
+                    <div class="flex items-baseline gap-1.5">
+                        <span id="kpiTotalValueExVat" class="text-lg font-extrabold text-emerald-700">0,00 ₺</span>
+                        <span class="text-[10px] font-semibold text-slate-400">KDV Hariç</span>
+                    </div>
+                    <div class="text-[11px] font-semibold text-slate-600 mt-0.5">
+                        KDV Dahil (%20): <span id="kpiTotalValueIncVat" class="text-slate-900 font-bold">0,00 ₺</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPI 4: Kritik Stok Uyarısı -->
+            <div id="kpiCriticalCard" onclick="toggleCriticalFilter()" class="bg-white rounded-xl p-3.5 border border-emerald-200/80 shadow-xs hover:shadow-md transition cursor-pointer relative overflow-hidden group">
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider group-hover:text-rose-600 transition">Kritik Stok Uyarısı</span>
+                    <div id="kpiCriticalIconBg" class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+                        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                    </div>
+                </div>
+                <div class="mt-1.5 flex items-baseline gap-2">
+                    <span id="kpiCriticalCount" class="text-xl font-extrabold text-rose-600">0</span>
+                    <span class="text-xs font-medium text-slate-500">Kritik / Tükendi</span>
+                </div>
+                <p class="text-[11px] text-rose-500 font-medium mt-0.5 flex items-center gap-1">
+                    <span>Kritik ürünleri filtrele</span>
+                </p>
+            </div>
+        </section>
+
+        <!-- Sekme Navigasyonu (Mevcut Stok Listesi / Stok Hareket Geçmişi / Tedarikçiler) -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-200 pb-0 no-print">
+            <div class="flex items-center gap-1 sm:gap-2 overflow-x-auto">
+                <button id="tabBtnInventory" onclick="switchTab('inventory')" class="px-3.5 py-2.5 text-xs sm:text-sm font-bold border-b-2 border-emerald-600 text-emerald-900 flex items-center gap-2 whitespace-nowrap transition cursor-pointer">
+                    <i data-lucide="clipboard-list" class="w-4 h-4 text-emerald-600"></i>
+                    <span>Mevcut Stok Listesi</span>
+                    <span id="tabBadgeInventory" class="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-800">0</span>
+                </button>
+                <button id="tabBtnSuppliers" onclick="switchTab('suppliers')" class="px-3.5 py-2.5 text-xs sm:text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-emerald-800 flex items-center gap-2 whitespace-nowrap transition cursor-pointer">
+                    <i data-lucide="building-2" class="w-4 h-4 text-emerald-600"></i>
+                    <span>Tedarikçiler & Fiyat Analizi</span>
+                    <span id="tabBadgeSuppliers" class="px-2 py-0.5 text-xs rounded-full bg-slate-200 text-slate-700">0</span>
+                </button>
+                <button id="tabBtnHistory" onclick="switchTab('history')" class="px-3.5 py-2.5 text-xs sm:text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-emerald-800 flex items-center gap-2 whitespace-nowrap transition cursor-pointer">
+                    <i data-lucide="history" class="w-4 h-4 text-teal-600"></i>
+                    <span>Stok Hareket Geçmişi</span>
+                    <span id="tabBadgeHistory" class="px-2 py-0.5 text-xs rounded-full bg-slate-200 text-slate-700">0</span>
+                </button>
+            </div>
+
+            <!-- Başlangıç Sarf Kalemlerini Yükleme Butonu -->
+            <div class="pb-2 sm:pb-0 flex items-center gap-2">
+                <button id="seedBtn" onclick="seedInitialDefaultData(false)" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-semibold shadow-2xs transition cursor-pointer" title="Standart 22 kalem sarf malzemesini envantere ekler">
+                    <i data-lucide="database-backup" class="w-3.5 h-3.5 text-emerald-600"></i>
+                    <span>Standart Sarf Listesini Yükle</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- SEKME 1: MEVCUT STOK LİSTESİ -->
+        <div id="viewInventory" class="space-y-3">
+            <!-- Arama ve Filtre Çubuğu -->
+            <div class="bg-white rounded-xl p-3.5 border border-emerald-200/80 shadow-xs space-y-2.5 no-print">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+                    <!-- Arama Girişi -->
+                    <div class="relative flex-grow max-w-md">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i data-lucide="search" class="w-4 h-4 text-emerald-600"></i>
+                        </div>
+                        <input 
+                            type="text" 
+                            id="searchInput" 
+                            placeholder="Malzeme adı, ölçü veya tedarikçi ara..." 
+                            class="w-full pl-9 pr-8 py-1.5 bg-emerald-50/50 border border-emerald-200 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                        >
+                        <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-rose-600 cursor-pointer">
+                            <i data-lucide="x-circle" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+
+                    <!-- Stok Durum Filtresi -->
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-xs font-semibold text-slate-500 mr-1">Durum:</span>
+                        <button onclick="setStatusFilter('ALL')" data-status="ALL" class="status-filter-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-700 text-white transition cursor-pointer">Tümü</button>
+                        <button onclick="setStatusFilter('NORMAL')" data-status="NORMAL" class="status-filter-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition cursor-pointer">Normal</button>
+                        <button onclick="setStatusFilter('CRITICAL')" data-status="CRITICAL" class="status-filter-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition cursor-pointer">Kritik / Azalan</button>
+                        <button onclick="setStatusFilter('OUT')" data-status="OUT" class="status-filter-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition cursor-pointer">Tükendi</button>
+                    </div>
+                </div>
+
+                <!-- Kategori Hapları -->
+                <div class="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-emerald-100" id="categoryFilterBar">
+                    <button onclick="setCategoryFilter('ALL')" data-cat="ALL" class="cat-filter-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white shadow-2xs whitespace-nowrap transition cursor-pointer">Tümü</button>
+                    <button onclick="setCategoryFilter('Cıvata & Somun & Pul')" data-cat="Cıvata & Somun & Pul" class="cat-filter-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50/80 text-emerald-900 hover:bg-emerald-100 whitespace-nowrap transition cursor-pointer">Cıvata & Somun & Pul</button>
+                    <button onclick="setCategoryFilter('Vidalar')" data-cat="Vidalar" class="cat-filter-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50/80 text-emerald-900 hover:bg-emerald-100 whitespace-nowrap transition cursor-pointer">Vidalar</button>
+                    <button onclick="setCategoryFilter('Kesici & Aşındırıcı')" data-cat="Kesici & Aşındırıcı" class="cat-filter-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50/80 text-emerald-900 hover:bg-emerald-100 whitespace-nowrap transition cursor-pointer">Kesici & Aşındırıcı</button>
+                    <button onclick="setCategoryFilter('Gijon & Bağlantı')" data-cat="Gijon & Bağlantı" class="cat-filter-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50/80 text-emerald-900 hover:bg-emerald-100 whitespace-nowrap transition cursor-pointer">Gijon & Bağlantı</button>
+                    <button onclick="setCategoryFilter('Diğer Sarf')" data-cat="Diğer Sarf" class="cat-filter-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50/80 text-emerald-900 hover:bg-emerald-100 whitespace-nowrap transition cursor-pointer">Diğer Sarf</button>
+                </div>
+            </div>
+
+            <!-- Daraltılmış, Ekrana Tam Sığan Stok Tablosu -->
+            <div class="bg-white rounded-xl border border-emerald-200 shadow-xs overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse table-auto">
+                        <thead>
+                            <tr class="bg-emerald-700 text-white text-[10.5px] uppercase tracking-wider select-none">
+                                <th class="py-2.5 px-2 font-bold text-center w-14">
+                                    Görsel
+                                </th>
+                                <th onclick="sortInventory('name')" class="py-2.5 px-2.5 font-bold cursor-pointer hover:bg-emerald-800 transition">
+                                    <div class="flex items-center gap-1">
+                                        <span>Malzeme / Tedarikçi</span>
+                                        <i data-lucide="arrow-up-down" class="w-3 h-3 text-emerald-200"></i>
+                                    </div>
+                                </th>
+                                <th onclick="sortInventory('category')" class="py-2.5 px-2 font-bold cursor-pointer hover:bg-emerald-800 transition hidden md:table-cell">
+                                    <div class="flex items-center gap-1">
+                                        <span>Kategori</span>
+                                        <i data-lucide="arrow-up-down" class="w-3 h-3 text-emerald-200"></i>
+                                    </div>
+                                </th>
+                                <th onclick="sortInventory('stock')" class="py-2.5 px-2.5 font-bold cursor-pointer hover:bg-emerald-800 transition w-36">
+                                    <div class="flex items-center gap-1">
+                                        <span>Mevcut Stok</span>
+                                        <i data-lucide="arrow-up-down" class="w-3 h-3 text-emerald-200"></i>
+                                    </div>
+                                </th>
+                                <th onclick="sortInventory('criticalLimit')" class="py-2.5 px-2 font-bold cursor-pointer hover:bg-emerald-800 transition text-center hidden lg:table-cell w-20">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <span>Limit</span>
+                                        <i data-lucide="arrow-up-down" class="w-3 h-3 text-emerald-200"></i>
+                                    </div>
+                                </th>
+                                <th onclick="sortInventory('unitPrice')" class="py-2.5 px-2.5 font-bold cursor-pointer hover:bg-emerald-800 transition text-right whitespace-nowrap">
+                                    <div class="flex items-center justify-end gap-1">
+                                        <span>Birim Fiyat</span>
+                                        <i data-lucide="arrow-up-down" class="w-3 h-3 text-emerald-200"></i>
+                                    </div>
+                                </th>
+                                <th onclick="sortInventory('totalValue')" class="py-2.5 px-2.5 font-bold cursor-pointer hover:bg-emerald-800 transition text-right whitespace-nowrap hidden sm:table-cell">
+                                    <div class="flex items-center justify-end gap-1">
+                                        <span>Toplam Değer</span>
+                                        <i data-lucide="arrow-up-down" class="w-3 h-3 text-emerald-200"></i>
+                                    </div>
+                                </th>
+                                <th class="py-2.5 px-2.5 font-bold text-left hidden xl:table-cell max-w-[140px]">Son İşlem</th>
+                                <th class="py-2.5 px-2.5 font-bold text-right whitespace-nowrap no-print">İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryTableBody" class="divide-y divide-emerald-100 text-xs">
+                            <!-- Dinamik Satırlar -->
+                        </tbody>
+                        <tfoot id="inventoryTableFooter" class="bg-emerald-50/90 border-t-2 border-emerald-600 font-bold text-slate-800 text-xs">
+                            <tr>
+                                <td colspan="3" class="py-2.5 px-3 text-emerald-900" id="filteredSummaryLabel">Listelenen 0 kalem özeti:</td>
+                                <td class="py-2.5 px-2.5 font-extrabold text-emerald-900" id="filteredTotalQtyCell">0 Adet</td>
+                                <td colspan="2" class="py-2.5 px-2.5 text-right text-slate-600">KDV Hariç Toplam:</td>
+                                <td class="py-2.5 px-2.5 text-right font-extrabold text-emerald-700 text-sm" id="filteredTotalValueCell">0,00 ₺</td>
+                                <td colspan="2" class="no-print"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- Yükleniyor veya Boş Durum -->
+                <div id="inventoryLoadingState" class="hidden py-10 text-center">
+                    <div class="inline-block w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-2"></div>
+                    <p class="text-sm font-semibold text-slate-600">Yurga Yemlik depo verileri senkronize ediliyor...</p>
+                </div>
+
+                <div id="inventoryEmptyState" class="hidden py-10 px-4 text-center">
+                    <div class="w-11 h-11 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center mx-auto mb-2.5">
+                        <i data-lucide="package-search" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-sm font-bold text-slate-800">Kayıtlı veya eşleşen sarf malzemesi bulunamadı</h3>
+                    <p class="text-xs text-slate-500 mt-1 max-w-md mx-auto">Arama filtrelerini temizleyebilir veya standart sarf listesini tek tıkla stoğa aktarabilirsiniz.</p>
+                    <div class="mt-3 flex items-center justify-center gap-2">
+                        <button onclick="resetAllFilters()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-lg transition cursor-pointer">Filtreleri Sıfırla</button>
+                        <button onclick="seedInitialDefaultData(false)" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition cursor-pointer">Standart Listeyi Yükle</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEKME 2: STOK HAREKET GEÇMİŞİ -->
+        <div id="viewHistory" class="hidden space-y-3">
+            <div class="bg-white rounded-xl p-3.5 border border-emerald-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="text-xs font-bold text-slate-600">Hareket Türü:</span>
+                    <button onclick="setHistoryTypeFilter('ALL')" data-htype="ALL" class="hist-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-700 text-white cursor-pointer">Tümü</button>
+                    <button onclick="setHistoryTypeFilter('IN')" data-htype="IN" class="hist-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 cursor-pointer">+ Stok Girişleri</button>
+                    <button onclick="setHistoryTypeFilter('OUT')" data-htype="OUT" class="hist-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 cursor-pointer">- Stok Çıkışları</button>
+                </div>
+                <div class="relative w-full sm:w-72">
+                    <i data-lucide="search" class="w-4 h-4 text-emerald-600 absolute left-3 top-2"></i>
+                    <input type="text" id="historySearchInput" placeholder="Malzeme, bölüm veya tedarikçi ara..." class="w-full pl-9 pr-3 py-1.5 bg-emerald-50/50 border border-emerald-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl border border-emerald-200 shadow-xs overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-emerald-700 text-white text-[11px] uppercase tracking-wider">
+                                <th class="py-2.5 px-3 font-bold whitespace-nowrap">Tarih / Saat</th>
+                                <th class="py-2.5 px-3 font-bold">İşlem Türü</th>
+                                <th class="py-2.5 px-3 font-bold">Malzeme Adı</th>
+                                <th class="py-2.5 px-3 font-bold text-right whitespace-nowrap">Miktar</th>
+                                <th class="py-2.5 px-3 font-bold text-right whitespace-nowrap">Birim Fiyat</th>
+                                <th class="py-2.5 px-3 font-bold">Bölüm / Tedarikçi / Açıklama</th>
+                                <th class="py-2.5 px-3 font-bold text-right whitespace-nowrap">Kalan Bakiye</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody" class="divide-y divide-emerald-100 text-xs">
+                            <!-- Hareket satırları -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="historyEmptyState" class="hidden py-10 text-center">
+                    <p class="text-sm font-semibold text-slate-500">Henüz kayıtlı stok hareketi bulunmuyor.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEKME 3: TEDARİKÇİLER & FİYAT ANALİZİ -->
+        <div id="viewSuppliers" class="hidden space-y-4">
+            <!-- Üst Bilgi ve Hızlı Aksiyon Çubuğu -->
+            <div class="bg-white rounded-xl p-4 border border-emerald-200 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-sm font-extrabold text-emerald-950 flex items-center gap-2">
+                        <i data-lucide="scale" class="w-4 h-4 text-emerald-600"></i>
+                        <span>Tedarikçi Performansı & Fiyat Karşılaştırma Merkezi</span>
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Hangi tedarikçinin hangi sarf malzemesine ne kadar fiyat verdiğini, en uygun teklif liderlerini ve tasarruf fırsatlarını inceleyin.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="openAddSupplierModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-2xs transition cursor-pointer">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i>
+                        <span>Yeni Tedarikçi Kartı Ekle</span>
+                    </button>
+                    <button onclick="exportSuppliersCSV()" class="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold rounded-lg transition cursor-pointer">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i>
+                        <span>Karşılaştırma Tablosunu İndir</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tedarikçi Özet Kartları (Grid) -->
+            <div id="supplierCardsGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+                <!-- Dinamik Tedarikçi Kartları -->
+            </div>
+
+            <!-- Boş Durum (Hiç Tedarikçi/Teklif Yoksa) -->
+            <div id="suppliersEmptyBanner" class="hidden bg-white rounded-xl p-8 border border-emerald-200 text-center space-y-2">
+                <div class="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
+                    <i data-lucide="building-2" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-sm font-bold text-slate-800">Henüz kayıtlı tedarikçi veya fiyat teklifi bulunmuyor</h3>
+                <p class="text-xs text-slate-500 max-w-md mx-auto">Yukarıdaki <strong>"Yeni Tedarikçi Kartı Ekle"</strong> butonundan firma ekleyebilir veya stok listesindeki ürünlerin fiyat alanına tıklayarak teklif girebilirsiniz.</p>
+            </div>
+
+            <!-- Ürün Bazlı Tedarikçi Fiyat Karşılaştırma Matrisi -->
+            <div class="bg-white rounded-xl border border-emerald-200 shadow-xs overflow-hidden">
+                <div class="p-3.5 bg-emerald-50/70 border-b border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div>
+                        <h3 class="text-xs font-extrabold text-emerald-950 uppercase tracking-wider">Ürün Bazlı Fiyat Karşılaştırma & En Uygun Tedarikçi Tablosu</h3>
+                        <p class="text-[11px] text-slate-500">Her satırda en düşük fiyatı veren firma otomatik yeşil rozetle vurgulanır.</p>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <select id="supplierFilterSelect" onchange="renderSupplierComparisonMatrix()" class="px-2.5 py-1.5 bg-white border border-emerald-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="ALL">Tüm Tedarikçiler</option>
+                        </select>
+                        <label class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-900 bg-white px-2.5 py-1.5 rounded-lg border border-emerald-200 cursor-pointer">
+                            <input type="checkbox" id="onlyQuotedItemsCheckbox" onchange="renderSupplierComparisonMatrix()" class="rounded text-emerald-600 focus:ring-emerald-500">
+                            <span>Sadece Teklif Girilenler</span>
+                        </label>
+                        <div class="relative">
+                            <i data-lucide="search" class="w-3.5 h-3.5 text-emerald-600 absolute left-2.5 top-2"></i>
+                            <input type="text" id="supplierMatrixSearch" oninput="renderSupplierComparisonMatrix()" placeholder="Ürün veya firma ara..." class="pl-8 pr-3 py-1.5 bg-white border border-emerald-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-emerald-700 text-white text-[10.5px] uppercase tracking-wider">
+                                <th class="py-2.5 px-3 font-bold">Sarf Malzemesi</th>
+                                <th class="py-2.5 px-3 font-bold text-right whitespace-nowrap">Mevcut Aktif Fiyat</th>
+                                <th class="py-2.5 px-3 font-bold whitespace-nowrap">En Uygun Tedarikçi</th>
+                                <th class="py-2.5 px-3 font-bold text-right whitespace-nowrap">En Uygun Fiyat</th>
+                                <th class="py-2.5 px-3 font-bold text-center whitespace-nowrap">Fark / Tasarruf</th>
+                                <th class="py-2.5 px-3 font-bold">Tüm Teklif Veren Firmalar & Fiyatları</th>
+                                <th class="py-2.5 px-3 font-bold text-right no-print">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="supplierComparisonBody" class="divide-y divide-emerald-100">
+                            <!-- Dinamik Karşılaştırma Satırları -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Alt Bilgi -->
+    <footer class="bg-white border-t border-emerald-200 py-3.5 mt-6 text-xs text-slate-500">
+        <div class="max-w-[1440px] mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div>
+                <strong class="text-emerald-800">Yurga Yemlik</strong> — Online Sarf Malzeme & Depo Stok Yönetim Paneli
+            </div>
+            <div class="text-emerald-700 font-medium">
+                Çoklu Tedarikçi Fiyat Karşılaştırma & Canlı Stok Takibi
+            </div>
+        </div>
+    </footer>
+
+    <!-- ===================================================================== -->
+    <!-- MODALLAR                                                              -->
+    <!-- ===================================================================== -->
+
+    <!-- 1. Stok Giriş / Çıkış Modalı -->
+    <div id="transactionModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-emerald-200">
+            <div id="txModalHeader" class="px-5 py-3.5 bg-emerald-600 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span id="txModalIconWrap" class="flex-shrink-0"><i data-lucide="arrow-down-left" class="w-5 h-5"></i></span>
+                    <h3 id="txModalTitle" class="font-bold text-base">Stok Girişi Yap</h3>
+                </div>
+                <button onclick="closeModal('transactionModal')" class="text-white/80 hover:text-white cursor-pointer">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form id="transactionForm" onsubmit="handleTransactionSubmit(event)" class="p-5 space-y-3.5">
+                <input type="hidden" id="txType" value="IN">
+                
+                <!-- Malzeme Seçimi -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Sarf Malzemesi *</label>
+                    <select id="txItemSelect" required onchange="onTxItemChange()" class="w-full px-3 py-2 bg-emerald-50/40 border border-emerald-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </select>
+                    <div id="txCurrentStockInfo" class="mt-1.5 text-xs text-slate-600 flex items-center justify-between bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">
+                        <span>Mevcut Depo Stoğu:</span>
+                        <span id="txCurrentStockVal" class="font-bold text-emerald-900">0 ADET</span>
+                    </div>
+                </div>
+
+                <!-- Miktar ve Birim Fiyat -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label id="txQtyLabel" class="block text-xs font-bold text-slate-700 mb-1">Giriş Miktarı *</label>
+                        <input type="number" id="txQty" min="1" step="1" required placeholder="Örn: 500" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                    <div id="txPriceContainer">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Birim Fiyat (₺ KDV Hariç)</label>
+                        <input type="number" id="txUnitPrice" min="0" step="0.01" placeholder="0.00" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                </div>
+
+                <!-- Tedarikçi Seçimi (Sadece Girişte) -->
+                <div id="txSupplierContainer">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Alım Yapılan Tedarikçi Firma *</label>
+                    <input type="text" id="txSupplierInput" placeholder="Tedarikçi firma adını yazın..." class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+
+                <!-- Bölüm / İrsaliye Açıklama -->
+                <div>
+                    <label id="txPartyLabel" class="block text-xs font-bold text-slate-700 mb-1">İrsaliye / Açıklama</label>
+                    <input type="text" id="txNote" required placeholder="Örn: İrsaliye No #104" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+
+                <!-- Hızlı Bölüm Seçenekleri (Sadece Çıkışta Görünür) -->
+                <div id="quickDeptChips" class="hidden flex flex-wrap gap-1.5">
+                    <span class="text-[11px] text-slate-400 w-full">Hızlı Bölüm / Hat Seçimi:</span>
+                    <button type="button" onclick="setTxNote('Kaynak & Montaj Atölyesi')" class="px-2.5 py-1 bg-emerald-50 hover:bg-amber-100 text-slate-700 rounded-md text-[11px] font-medium cursor-pointer">Kaynak & Montaj</button>
+                    <button type="button" onclick="setTxNote('Bakım Onarım Ekibi')" class="px-2.5 py-1 bg-emerald-50 hover:bg-amber-100 text-slate-700 rounded-md text-[11px] font-medium cursor-pointer">Bakım Onarım</button>
+                    <button type="button" onclick="setTxNote('Saha Montaj Ekibi')" class="px-2.5 py-1 bg-emerald-50 hover:bg-amber-100 text-slate-700 rounded-md text-[11px] font-medium cursor-pointer">Saha Montaj</button>
+                    <button type="button" onclick="setTxNote('Üretim Hattı 1')" class="px-2.5 py-1 bg-emerald-50 hover:bg-amber-100 text-slate-700 rounded-md text-[11px] font-medium cursor-pointer">Üretim Hattı 1</button>
+                </div>
+
+                <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('transactionModal')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer">Vazgeç</button>
+                    <button type="submit" id="txSubmitBtn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition cursor-pointer">Stok Girişini Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. Yeni Malzeme Ekle / Düzenle Modalı -->
+    <div id="materialModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-emerald-200">
+            <div class="px-5 py-3.5 bg-emerald-700 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="package-plus" class="w-5 h-5 text-emerald-200"></i>
+                    <h3 id="matModalTitle" class="font-bold text-base">Yeni Sarf Malzemesi Ekle</h3>
+                </div>
+                <button onclick="closeModal('materialModal')" class="text-emerald-100 hover:text-white cursor-pointer">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form id="materialForm" onsubmit="handleMaterialSubmit(event)" class="p-5 space-y-3.5">
+                <input type="hidden" id="matId" value="">
+                <input type="hidden" id="matPhotoData" value="">
+                
+                <!-- Ürün Fotoğrafı Yükleme Alanı -->
+                <div class="flex items-center gap-3.5 p-2.5 bg-emerald-50/60 rounded-xl border border-emerald-200">
+                    <div id="matPhotoPreviewBox" onclick="document.getElementById('matPhotoInput').click()" class="w-14 h-14 rounded-xl bg-white border-2 border-dashed border-emerald-300 hover:border-emerald-500 flex items-center justify-center overflow-hidden cursor-pointer flex-shrink-0 transition">
+                        <i data-lucide="camera" class="w-5 h-5 text-emerald-500"></i>
+                    </div>
+                    <div class="flex-grow">
+                        <div class="text-xs font-bold text-slate-800">Ürün Fotoğrafı (Opsiyonel)</div>
+                        <p class="text-[11px] text-slate-500">Tablonun en başında görünmesi için görsel seçin.</p>
+                        <div class="mt-1.5 flex items-center gap-2">
+                            <input type="file" id="matPhotoInput" accept="image/*" class="hidden" onchange="handleModalPhotoSelect(event)">
+                            <button type="button" onclick="document.getElementById('matPhotoInput').click()" class="px-2.5 py-1 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-lg text-[11px] font-bold transition cursor-pointer">
+                                Fotoğraf Seç / Çek
+                            </button>
+                            <button type="button" id="matRemovePhotoBtn" onclick="clearModalPhoto()" class="hidden px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-lg text-[11px] font-bold transition cursor-pointer">
+                                Kaldır
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Malzeme Adı / Ölçü / Marka *</label>
+                    <input type="text" id="matName" required placeholder="Örn: CIV M12*40 AKB CİVATA" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Kategori *</label>
+                        <select id="matCategory" required class="w-full px-3 py-2 bg-emerald-50/40 border border-emerald-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="Cıvata & Somun & Pul">Cıvata & Somun & Pul</option>
+                            <option value="Vidalar">Vidalar</option>
+                            <option value="Kesici & Aşındırıcı">Kesici & Aşındırıcı</option>
+                            <option value="Gijon & Bağlantı">Gijon & Bağlantı</option>
+                            <option value="Diğer Sarf">Diğer Sarf</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Birim *</label>
+                        <select id="matUnit" required class="w-full px-3 py-2 bg-emerald-50/40 border border-emerald-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="ADET">ADET</option>
+                            <option value="KUTU">KUTU</option>
+                            <option value="PAKET">PAKET</option>
+                            <option value="KG">KG</option>
+                            <option value="METRE">METRE</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div id="matInitialStockGroup">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Başlangıç Stoğu *</label>
+                        <input type="number" id="matStock" min="0" step="1" value="0" required class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Kritik Limit *</label>
+                        <input type="number" id="matCriticalLimit" min="0" step="1" value="500" required class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-rose-600 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Birim Fiyat (₺) *</label>
+                        <input type="number" id="matUnitPrice" min="0" step="0.01" value="0.00" required class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Tedarikçi Firma *</label>
+                    <input type="text" id="matSupplier" placeholder="Örn: ABC Hırdavat Ltd. Şti." class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <p class="text-[10.5px] text-slate-400 mt-1">Not: Kaydettikten sonra ürün satırındaki fiyat alanına tıklayarak başka tedarikçilerin fiyat tekliflerini de ekleyebilirsiniz.</p>
+                </div>
+
+                <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('materialModal')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer">İptal</button>
+                    <button type="submit" id="matSubmitBtn" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition cursor-pointer">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 3. Silme Onay Modalı -->
+    <div id="deleteModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-5 border border-slate-200 text-center space-y-4">
+            <div class="w-11 h-11 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+                <i data-lucide="trash-2" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <h3 class="text-base font-bold text-slate-900">Malzeme Kaydını Sil</h3>
+                <p class="text-xs text-slate-500 mt-1">
+                    <strong id="deleteItemName" class="text-slate-800"></strong> adlı malzemeyi stok kartlarından kalıcı olarak silmek istediğinize emin misiniz?
+                </p>
+            </div>
+            <div class="flex items-center justify-center gap-2 pt-2">
+                <button onclick="closeModal('deleteModal')" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer">Vazgeç</button>
+                <button id="confirmDeleteBtn" onclick="executeDeleteMaterial()" class="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-sm transition cursor-pointer">Evet, Sil</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Hızlı Fotoğraf Önizleme & Yükleme Modalı -->
+    <div id="photoModal" class="fixed inset-0 z-50 hidden bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-emerald-200">
+            <div class="px-5 py-3 bg-emerald-700 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2 truncate pr-2">
+                    <i data-lucide="image" class="w-4 h-4 text-emerald-200 flex-shrink-0"></i>
+                    <h3 id="photoModalTitle" class="font-bold text-sm truncate">Ürün Görseli</h3>
+                </div>
+                <button onclick="closeModal('photoModal')" class="text-emerald-100 hover:text-white cursor-pointer flex-shrink-0">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div id="photoModalPreviewContainer" class="w-full aspect-square max-h-64 mx-auto rounded-xl bg-emerald-50/40 border-2 border-dashed border-emerald-300 flex flex-col items-center justify-center overflow-hidden relative">
+                </div>
+                <input type="file" id="quickPhotoInput" accept="image/*" class="hidden" onchange="handleQuickPhotoUpload(event)">
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="document.getElementById('quickPhotoInput').click()" id="quickPhotoUploadBtn" class="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm flex items-center justify-center gap-2 transition cursor-pointer">
+                        <i data-lucide="camera" class="w-4 h-4"></i>
+                        <span>Fotoğraf Yükle / Değiştir</span>
+                    </button>
+                    <button type="button" id="quickPhotoDeleteBtn" onclick="deleteItemPhoto()" class="hidden py-2.5 px-3.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold rounded-xl transition cursor-pointer" title="Fotoğrafı Kaldır">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. Çoklu Tedarikçi Fiyat Karşılaştırma & Teklif Ekleme Modalı -->
+    <div id="supplierQuotesModal" class="fixed inset-0 z-50 hidden bg-slate-900/65 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden border border-emerald-200">
+            <div class="px-5 py-3.5 bg-emerald-700 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2 truncate pr-2">
+                    <i data-lucide="tags" class="w-5 h-5 text-emerald-200 flex-shrink-0"></i>
+                    <div class="truncate">
+                        <h3 class="font-bold text-sm">Tedarikçi Fiyat Teklifleri</h3>
+                        <p id="sqItemNameSubtitle" class="text-[11px] text-emerald-100 truncate">Ürün Adı</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('supplierQuotesModal')" class="text-emerald-100 hover:text-white cursor-pointer flex-shrink-0">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="p-5 space-y-4 max-h-[82vh] overflow-y-auto">
+                <!-- Yeni Tedarikçi Fiyatı Ekleme Formu -->
+                <form id="supplierQuoteForm" onsubmit="handleAddSupplierQuote(event)" class="bg-emerald-50/70 p-3.5 rounded-xl border border-emerald-200 space-y-3">
+                    <div class="text-xs font-extrabold text-emerald-900 flex items-center gap-1.5">
+                        <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-600"></i>
+                        <span>Başka Tedarikçiden Fiyat Ekle</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                        <div class="sm:col-span-5">
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Tedarikçi Firma *</label>
+                            <input type="text" id="sqSupplierName" required placeholder="Örn: Yılmaz Cıvata" class="w-full px-2.5 py-1.5 bg-white border border-emerald-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                        <div class="sm:col-span-3">
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Birim Fiyat (₺) *</label>
+                            <input type="number" id="sqPrice" min="0" step="0.01" required placeholder="0.00" class="w-full px-2.5 py-1.5 bg-white border border-emerald-300 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                        <div class="sm:col-span-4">
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Not / Vade / Marka</label>
+                            <input type="text" id="sqNote" placeholder="Örn: Peşin / 30 gün vade" class="w-full px-2.5 py-1.5 bg-white border border-emerald-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between pt-1">
+                        <label class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-900 cursor-pointer">
+                            <input type="checkbox" id="sqSetAsActive" class="rounded text-emerald-600 focus:ring-emerald-500">
+                            <span>Bu fiyatı ürünün aktif birim fiyatı yap</span>
+                        </label>
+                        <button type="submit" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-2xs transition cursor-pointer">
+                            + Fiyat Teklifini Ekle
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Kayıtlı Tedarikçi Fiyatları Listesi -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold text-slate-700">Kayıtlı Tedarikçi Fiyatları (En Uygun Üstte)</span>
+                        <span id="sqCountBadge" class="text-[11px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">0 Teklif</span>
+                    </div>
+                    <div class="border border-emerald-200 rounded-xl overflow-hidden">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-emerald-100/80 text-emerald-950 text-[10.5px] uppercase">
+                                    <th class="py-2 px-3 font-bold">Tedarikçi Firma</th>
+                                    <th class="py-2 px-3 font-bold text-right">Birim Fiyat</th>
+                                    <th class="py-2 px-3 font-bold">Tarih / Not</th>
+                                    <th class="py-2 px-3 font-bold text-right">İşlem</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sqTableBody" class="divide-y divide-emerald-100">
+                                <!-- Dinamik teklif satırları -->
+                            </tbody>
+                        </table>
+                        <div id="sqEmptyState" class="hidden py-6 text-center text-xs text-slate-500">
+                            Bu ürün için henüz eklenmiş tedarikçi fiyat teklifi bulunmuyor.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. Yeni Tedarikçi Kartı Ekle / Düzenle Modalı -->
+    <div id="supplierProfileModal" class="fixed inset-0 z-50 hidden bg-slate-900/65 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-emerald-200">
+            <div class="px-5 py-3.5 bg-emerald-700 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="building-2" class="w-5 h-5 text-emerald-200"></i>
+                    <h3 id="spModalTitle" class="font-bold text-base">Yeni Tedarikçi Kartı Ekle</h3>
+                </div>
+                <button onclick="closeModal('supplierProfileModal')" class="text-emerald-100 hover:text-white cursor-pointer">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form onsubmit="handleSaveSupplierProfile(event)" class="p-5 space-y-3.5">
+                <input type="hidden" id="spOriginalName" value="">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Tedarikçi Firma Unvanı *</label>
+                    <input type="text" id="spName" required placeholder="Örn: Marmara Civata & Hırdavat" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Yetkili Kişi</label>
+                        <input type="text" id="spContactPerson" placeholder="Örn: Ahmet Bey" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Telefon Numarası</label>
+                        <input type="text" id="spPhone" placeholder="Örn: 0532 000 00 00" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Şehir / Bölge</label>
+                        <input type="text" id="spCity" placeholder="Örn: Bursa / Mustafakemalpaşa" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Ödeme / Vade Koşulu</label>
+                        <input type="text" id="spPaymentTerm" placeholder="Örn: 30 Gün Vadeli / Nakit" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Firma Notu / Uzmanlık Alanı</label>
+                    <input type="text" id="spNotes" placeholder="Örn: Kesici taşlarda iskonto yüksek, teslimat hızlı" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('supplierProfileModal')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer">Vazgeç</button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition cursor-pointer">Tedarikçiyi Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const CUSTOM_FIREBASE_CONFIG = null;
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'yurga-yemlik-sarf-stok';
+        let activeFirebaseConfig = CUSTOM_FIREBASE_CONFIG;
+        if (!activeFirebaseConfig && typeof __firebase_config !== 'undefined' && __firebase_config) {
+            try {
+                activeFirebaseConfig = JSON.parse(__firebase_config);
+            } catch (e) {
+                activeFirebaseConfig = null;
+            }
+        }
+
+        let storageMode = 'LOCAL';
+        let db = null;
+        let auth = null;
+        let currentUser = null;
+
+        const LOCAL_INVENTORY_KEY = 'yurga_yemlik_inventory_v2';
+        const LOCAL_TRANSACTIONS_KEY = 'yurga_yemlik_transactions_v2';
+        const LOCAL_SUPPLIERS_KEY = 'yurga_yemlik_suppliers_v2';
+
+        // Uygulama İçi Durum (State)
+        let inventoryList = [];
+        let transactionList = [];
+        let supplierProfiles = [];
+        let activeTab = 'inventory';
+        let searchQuery = '';
+        let categoryFilter = 'ALL';
+        let statusFilter = 'ALL';
+        let historyTypeFilter = 'ALL';
+        let historySearchQuery = '';
+        let sortField = 'orderIndex';
+        let sortDir = 'asc';
+        let pendingDeleteId = null;
+        let activePhotoItemId = null;
+        let activeQuoteItemId = null;
+        let hasCheckedInitialSeed = false;
+
+        // Standart 22 Kalem Başlangıç Sarf Malzemeleri (Tedarikçi adı temizlenmiş)
+        const INITIAL_DEFAULT_ITEMS = [
+            { orderIndex: 1, name: "CIV SOMUN FIBER 10 MM", category: "Cıvata & Somun & Pul", stock: 5000, unit: "ADET", criticalLimit: 500, unitPrice: 1.50, supplier: "" },
+            { orderIndex: 2, name: "CIV M8*15 CIVATA", category: "Cıvata & Somun & Pul", stock: 5000, unit: "ADET", criticalLimit: 500, unitPrice: 1.25, supplier: "" },
+            { orderIndex: 3, name: "CIV SOMUN 8 MM", category: "Cıvata & Somun & Pul", stock: 5000, unit: "ADET", criticalLimit: 500, unitPrice: 0.60, supplier: "" },
+            { orderIndex: 4, name: "CIV M10*90 CIVATA", category: "Cıvata & Somun & Pul", stock: 1000, unit: "ADET", criticalLimit: 200, unitPrice: 6.75, supplier: "" },
+            { orderIndex: 5, name: "CIV 3,9*19 RYSB AKILLI VİDA PULLU", category: "Vidalar", stock: 5000, unit: "ADET", criticalLimit: 500, unitPrice: 0.38, supplier: "" },
+            { orderIndex: 6, name: "CIV 7,5*60 BULDEX VİDA", category: "Vidalar", stock: 5000, unit: "ADET", criticalLimit: 500, unitPrice: 1.25, supplier: "" },
+            { orderIndex: 7, name: "CIV M6*20 CIVATA", category: "Cıvata & Somun & Pul", stock: 5000, unit: "ADET", criticalLimit: 500, unitPrice: 1.00, supplier: "" },
+            { orderIndex: 8, name: "SUNTA VİDASI 5*40 (200 ADET)", category: "Vidalar", stock: 5000, unit: "ADET", criticalLimit: 500, unitPrice: 0.46, supplier: "" },
+            { orderIndex: 9, name: "CIV PUL 10 MM", category: "Cıvata & Somun & Pul", stock: 5000, unit: "ADET", criticalLimit: 500, unitPrice: 0.38, supplier: "" },
+            { orderIndex: 10, name: "CIV 5.5*90 PANEL VİDASI 6 MM DELME", category: "Vidalar", stock: 5000, unit: "ADET", criticalLimit: 500, unitPrice: 2.58, supplier: "" },
+            { orderIndex: 11, name: "CIV M6*20 B.ÇERÇEVE VİDASI DIN 603", category: "Cıvata & Somun & Pul", stock: 5000, unit: "ADET", criticalLimit: 500, unitPrice: 1.38, supplier: "" },
+            { orderIndex: 12, name: "CIV SOMUN 6 MM", category: "Cıvata & Somun & Pul", stock: 5000, unit: "ADET", criticalLimit: 500, unitPrice: 0.38, supplier: "" },
+            { orderIndex: 13, name: "CIV M16*60 CIVATA", category: "Cıvata & Somun & Pul", stock: 1000, unit: "ADET", criticalLimit: 200, unitPrice: 12.50, supplier: "" },
+            { orderIndex: 14, name: "CIV SOMUN TAKVİYELİ 16 MM", category: "Cıvata & Somun & Pul", stock: 1000, unit: "ADET", criticalLimit: 200, unitPrice: 20.83, supplier: "" },
+            { orderIndex: 15, name: "CIV PUL 1/2", category: "Cıvata & Somun & Pul", stock: 5000, unit: "ADET", criticalLimit: 500, unitPrice: 0.83, supplier: "" },
+            { orderIndex: 16, name: "CIV PUL 5/16", category: "Cıvata & Somun & Pul", stock: 5000, unit: "ADET", criticalLimit: 500, unitPrice: 0.50, supplier: "" },
+            { orderIndex: 17, name: "115*1*22 NOX METAL KESİCİ TAŞ KARBOSAN", category: "Kesici & Aşındırıcı", stock: 1000, unit: "ADET", criticalLimit: 200, unitPrice: 17.50, supplier: "" },
+            { orderIndex: 18, name: "115*22 60 KUM FLAP DİSK ZİRKON", category: "Kesici & Aşındırıcı", stock: 200, unit: "ADET", criticalLimit: 50, unitPrice: 62.50, supplier: "" },
+            { orderIndex: 19, name: "CIV 4,2*38 YHB AKILLI VİDA", category: "Vidalar", stock: 5000, unit: "ADET", criticalLimit: 500, unitPrice: 0.54, supplier: "" },
+            { orderIndex: 20, name: "CIV SOMUN 12 MM", category: "Cıvata & Somun & Pul", stock: 5000, unit: "ADET", criticalLimit: 500, unitPrice: 2.08, supplier: "" },
+            { orderIndex: 21, name: "CIV SOMUN 10 MM", category: "Cıvata & Somun & Pul", stock: 5000, unit: "ADET", criticalLimit: 500, unitPrice: 1.38, supplier: "" },
+            { orderIndex: 22, name: "GIJON 12 MM", category: "Gijon & Bağlantı", stock: 500, unit: "ADET", criticalLimit: 100, unitPrice: 37.50, supplier: "" }
+        ];
+
+        // İstemci Tarafı Görsel Sıkıştırma
+        function compressImageFile(file, maxSize = 260, quality = 0.78) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        let width = img.width;
+                        let height = img.height;
+                        if (width > height) {
+                            if (width > maxSize) { height *= maxSize / width; width = maxSize; }
+                        } else {
+                            if (height > maxSize) { width *= maxSize / height; height = maxSize; }
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    };
+                    img.onerror = () => reject(new Error("Görsel yüklenemedi."));
+                    img.src = e.target.result;
+                };
+                reader.onerror = () => reject(new Error("Dosya okunamadı."));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Firestore Koleksiyon Yolları
+        const getInventoryCol = () => collection(db, 'artifacts', appId, 'public', 'data', 'yurga_sarf_stok');
+        const getTransactionsCol = () => collection(db, 'artifacts', appId, 'public', 'data', 'yurga_sarf_hareketler');
+        const getSuppliersCol = () => collection(db, 'artifacts', appId, 'public', 'data', 'yurga_sarf_tedarikciler');
+
+        // Yerel Depolama (localStorage) Okuma / Yazma
+        function saveLocalState() {
+            try {
+                localStorage.setItem(LOCAL_INVENTORY_KEY, JSON.stringify(inventoryList));
+                localStorage.setItem(LOCAL_TRANSACTIONS_KEY, JSON.stringify(transactionList));
+                localStorage.setItem(LOCAL_SUPPLIERS_KEY, JSON.stringify(supplierProfiles));
+            } catch (err) {
+                console.error("Yerel depolama yazma hatası:", err);
+                showToast("Tarayıcı depolama alanı dolu olabilir; görsel boyutunu küçültün.", "error");
+            }
+        }
+
+        function loadLocalState() {
+            try {
+                const rawInv = localStorage.getItem(LOCAL_INVENTORY_KEY);
+                const rawTx = localStorage.getItem(LOCAL_TRANSACTIONS_KEY);
+                const rawSup = localStorage.getItem(LOCAL_SUPPLIERS_KEY);
+                inventoryList = rawInv ? JSON.parse(rawInv) : [];
+                transactionList = rawTx ? JSON.parse(rawTx) : [];
+                supplierProfiles = rawSup ? JSON.parse(rawSup) : [];
+                transactionList.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            } catch (err) {
+                console.error("Yerel depolama okuma hatası:", err);
+                inventoryList = [];
+                transactionList = [];
+                supplierProfiles = [];
+            }
+        }
+
+        function refreshAllViews() {
+            document.getElementById('inventoryLoadingState').classList.add('hidden');
+            updateKPIs();
+            renderInventoryTable();
+            populateTransactionSelect();
+            document.getElementById('tabBadgeHistory').textContent = transactionList.length;
+            renderHistoryTable();
+            renderSuppliersPage();
+            if (activeQuoteItemId) {
+                renderSupplierQuotesTable(activeQuoteItemId);
+            }
+        }
+
+        // Biçimlendiriciler
+        const formatCurrency = (val) => Number(val || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+        const formatNumber = (val) => Number(val || 0).toLocaleString('tr-TR');
+        const formatDateTime = (isoString) => {
+            if (!isoString) return '-';
+            const d = new Date(isoString);
+            return d.toLocaleDateString('tr-TR') + ' ' + d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+        };
+
+        // Bildirim Kutusu
+        let toastTimer;
+        window.showToast = function(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            const box = document.getElementById('toast-box');
+            const iconWrap = document.getElementById('toast-icon-wrap');
+            const msgEl = document.getElementById('toast-message');
+
+            msgEl.textContent = msg;
+            if (type === 'error') {
+                box.className = 'bg-rose-800 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 border border-rose-600';
+                iconWrap.innerHTML = `<i data-lucide="alert-circle" class="w-5 h-5 text-rose-200"></i>`;
+            } else if (type === 'warning') {
+                box.className = 'bg-amber-700 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 border border-amber-500';
+                iconWrap.innerHTML = `<i data-lucide="arrow-up-right" class="w-5 h-5 text-amber-200"></i>`;
+            } else {
+                box.className = 'bg-emerald-800 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 border border-emerald-500';
+                iconWrap.innerHTML = `<i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-200"></i>`;
+            }
+            lucide.createIcons();
+
+            toast.classList.remove('translate-y-24', 'opacity-0');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                toast.classList.add('translate-y-24', 'opacity-0');
+            }, 3500);
+        };
+
+        // Hibrit Başlatma Motoru
+        async function initApp() {
+            document.getElementById('currentDateDisplay').textContent = new Date().toLocaleDateString('tr-TR', {
+                day: '2-digit', month: '2-digit', year: 'numeric'
+            });
+
+            if (activeFirebaseConfig && activeFirebaseConfig.apiKey) {
+                try {
+                    const app = initializeApp(activeFirebaseConfig);
+                    auth = getAuth(app);
+                    db = getFirestore(app);
+
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+
+                    currentUser = auth.currentUser;
+                    storageMode = 'CLOUD';
+                    updateSyncIndicator('CLOUD');
+                    startRealtimeListeners();
+                    return;
+                } catch (error) {
+                    console.warn("Firebase bağlantısı kurulamadı, Yerel Depo Moduna geçiliyor:", error);
+                }
+            }
+
+            startLocalMode();
+        }
+
+        function startLocalMode() {
+            storageMode = 'LOCAL';
+            updateSyncIndicator('LOCAL');
+            loadLocalState();
+
+            if (inventoryList.length === 0 && !hasCheckedInitialSeed) {
+                hasCheckedInitialSeed = true;
+                seedInitialDefaultData(true);
+            } else {
+                hasCheckedInitialSeed = true;
+                refreshAllViews();
+            }
+        }
+
+        function updateSyncIndicator(mode) {
+            const el = document.getElementById('syncStatus');
+            const userBadge = document.getElementById('userBadge');
+            if (mode === 'CLOUD' && currentUser) {
+                el.className = "inline-flex items-center gap-1.5 text-emerald-200 font-semibold";
+                el.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-300 animate-pulse"></span> Canlı Bulut Aktif`;
+                userBadge.textContent = `Oturum: ${currentUser.uid.slice(0, 8)}...`;
+            } else {
+                el.className = "inline-flex items-center gap-1.5 text-emerald-200 font-semibold";
+                el.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-300"></span> Yerel Depo Modu (Aktif)`;
+                userBadge.textContent = `Depolama: Tarayıcı Hafızası`;
+            }
+        }
+
+        // Gerçek Zamanlı Firestore Dinleyicileri
+        function startRealtimeListeners() {
+            if (!currentUser || storageMode !== 'CLOUD') return;
+
+            onSnapshot(getInventoryCol(), async (snapshot) => {
+                document.getElementById('inventoryLoadingState').classList.add('hidden');
+                
+                const items = [];
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    // Eski kayıtlarda varsa tedarikçi alanını temiz tutma kontrolü
+                    const cleanSupplier = (data.supplier || '').includes('Uzunoğulları') ? '' : (data.supplier || '');
+                    items.push({ id: docSnap.id, ...data, supplier: cleanSupplier });
+                });
+
+                if (items.length === 0 && !hasCheckedInitialSeed) {
+                    hasCheckedInitialSeed = true;
+                    await seedInitialDefaultData(true);
+                    return;
+                }
+                hasCheckedInitialSeed = true;
+
+                inventoryList = items;
+                updateKPIs();
+                renderInventoryTable();
+                populateTransactionSelect();
+                renderSuppliersPage();
+                if (activeQuoteItemId) {
+                    renderSupplierQuotesTable(activeQuoteItemId);
+                }
+            }, (error) => {
+                console.error("Stok dinleme hatası, yerel moda dönülüyor:", error);
+                startLocalMode();
+            });
+
+            onSnapshot(getSuppliersCol(), (snapshot) => {
+                const sups = [];
+                snapshot.forEach((docSnap) => {
+                    sups.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                supplierProfiles = sups;
+                renderSuppliersPage();
+            });
+
+            onSnapshot(getTransactionsCol(), (snapshot) => {
+                const txs = [];
+                snapshot.forEach((docSnap) => {
+                    txs.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                txs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                transactionList = txs;
+                document.getElementById('tabBadgeHistory').textContent = transactionList.length;
+                renderHistoryTable();
+            });
+        }
+
+        // Standart 22 Kalem Sarf Listesini Aktarma
+        window.seedInitialDefaultData = async function(isAuto = false) {
+            const btn = document.getElementById('seedBtn');
+            if (btn) btn.disabled = true;
+
+            try {
+                const nowIso = new Date().toISOString();
+                let addedCount = 0;
+
+                if (storageMode === 'CLOUD' && currentUser) {
+                    const existingSnap = await getDocs(getInventoryCol());
+                    const existingNames = new Set();
+                    existingSnap.forEach(d => existingNames.add((d.data().name || '').trim().toUpperCase()));
+
+                    for (const item of INITIAL_DEFAULT_ITEMS) {
+                        if (!existingNames.has(item.name.trim().toUpperCase())) {
+                            const docId = `sarf_item_${String(item.orderIndex).padStart(2, '0')}`;
+                            await setDoc(doc(getInventoryCol(), docId), {
+                                ...item,
+                                supplierQuotes: [],
+                                lastAction: `Açılış Stoğu (+${formatNumber(item.stock)})`,
+                                updatedAt: nowIso
+                            });
+
+                            await addDoc(getTransactionsCol(), {
+                                itemId: docId,
+                                itemName: item.name,
+                                type: 'IN',
+                                qty: item.stock,
+                                unit: item.unit,
+                                unitPrice: item.unitPrice,
+                                note: 'Depo Açılış Stoğu',
+                                balanceAfter: item.stock,
+                                timestamp: nowIso,
+                                userId: currentUser.uid
+                            });
+                            addedCount++;
+                        }
+                    }
+                } else {
+                    const existingNames = new Set(inventoryList.map(i => (i.name || '').trim().toUpperCase()));
+                    for (const item of INITIAL_DEFAULT_ITEMS) {
+                        if (!existingNames.has(item.name.trim().toUpperCase())) {
+                            const docId = `sarf_item_${String(item.orderIndex).padStart(2, '0')}`;
+                            inventoryList.push({
+                                id: docId,
+                                ...item,
+                                supplierQuotes: [],
+                                photoUrl: '',
+                                lastAction: `Açılış Stoğu (+${formatNumber(item.stock)})`,
+                                updatedAt: nowIso
+                            });
+                            transactionList.unshift({
+                                id: `tx_${Date.now()}_${item.orderIndex}`,
+                                itemId: docId,
+                                itemName: item.name,
+                                type: 'IN',
+                                qty: item.stock,
+                                unit: item.unit,
+                                unitPrice: item.unitPrice,
+                                note: 'Depo Açılış Stoğu',
+                                balanceAfter: item.stock,
+                                timestamp: nowIso,
+                                userId: 'local_user'
+                            });
+                            addedCount++;
+                        }
+                    }
+                    saveLocalState();
+                    refreshAllViews();
+                }
+
+                if (addedCount > 0) {
+                    showToast(`${addedCount} kalem sarf malzemesi stoğa aktarıldı.`);
+                } else if (!isAuto) {
+                    showToast("Standart listedeki 22 kalemin tamamı zaten envanterde kayıtlı.", "warning");
+                }
+            } catch (err) {
+                console.error("Veri aktarım hatası:", err);
+                showToast("Veriler aktarılırken bir hata oluştu.", "error");
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        };
+
+        // KPI Kartlarını Güncelleme
+        function updateKPIs() {
+            const totalItems = inventoryList.length;
+            let totalQty = 0;
+            let totalValueExVat = 0;
+            let criticalCount = 0;
+
+            inventoryList.forEach(item => {
+                const stock = Number(item.stock || 0);
+                const price = Number(item.unitPrice || 0);
+                const limit = Number(item.criticalLimit || 0);
+
+                totalQty += stock;
+                totalValueExVat += stock * price;
+                if (stock <= limit) {
+                    criticalCount++;
+                }
+            });
+
+            const totalValueIncVat = totalValueExVat * 1.20;
+
+            document.getElementById('kpiTotalItems').textContent = formatNumber(totalItems);
+            document.getElementById('tabBadgeInventory').textContent = formatNumber(totalItems);
+            document.getElementById('kpiTotalQty').textContent = formatNumber(totalQty);
+            document.getElementById('kpiTotalValueExVat').textContent = formatCurrency(totalValueExVat);
+            document.getElementById('kpiTotalValueIncVat').textContent = formatCurrency(totalValueIncVat);
+            document.getElementById('kpiCriticalCount').textContent = formatNumber(criticalCount);
+
+            const critCard = document.getElementById('kpiCriticalCard');
+            if (criticalCount > 0) {
+                critCard.classList.add('border-rose-300', 'bg-rose-50/30');
+            } else {
+                critCard.classList.remove('border-rose-300', 'bg-rose-50/30');
+            }
+        }
+
+        // Kategori Rozeti Rengi
+        function getCategoryStyle(cat) {
+            switch (cat) {
+                case 'Cıvata & Somun & Pul': return 'bg-emerald-50 text-emerald-800 border-emerald-200';
+                case 'Vidalar': return 'bg-teal-50 text-teal-800 border-teal-200';
+                case 'Kesici & Aşındırıcı': return 'bg-rose-50 text-rose-700 border-rose-200';
+                case 'Gijon & Bağlantı': return 'bg-amber-50 text-amber-800 border-amber-200';
+                default: return 'bg-slate-100 text-slate-700 border-slate-200';
+            }
+        }
+
+        // Filtrelenmiş ve Sıralanmış Stok Listesi
+        function getFilteredInventory() {
+            const q = searchQuery.toLocaleLowerCase('tr-TR').trim();
+            return inventoryList
+                .filter(item => {
+                    const stock = Number(item.stock || 0);
+                    const limit = Number(item.criticalLimit || 0);
+
+                    if (categoryFilter !== 'ALL' && item.category !== categoryFilter) return false;
+                    if (statusFilter === 'OUT' && stock > 0) return false;
+                    if (statusFilter === 'CRITICAL' && !(stock > 0 && stock <= limit)) return false;
+                    if (statusFilter === 'NORMAL' && stock <= limit) return false;
+
+                    if (q) {
+                        const matchName = (item.name || '').toLocaleLowerCase('tr-TR').includes(q);
+                        const matchCat = (item.category || '').toLocaleLowerCase('tr-TR').includes(q);
+                        const matchSup = (item.supplier || '').toLocaleLowerCase('tr-TR').includes(q);
+                        const matchQuotes = (item.supplierQuotes || []).some(sq => (sq.supplier || '').toLocaleLowerCase('tr-TR').includes(q));
+                        if (!matchName && !matchCat && !matchSup && !matchQuotes) return false;
+                    }
+                    return true;
+                })
+                .sort((a, b) => {
+                    let valA, valB;
+                    if (sortField === 'totalValue') {
+                        valA = Number(a.stock || 0) * Number(a.unitPrice || 0);
+                        valB = Number(b.stock || 0) * Number(b.unitPrice || 0);
+                    } else {
+                        valA = a[sortField] ?? '';
+                        valB = b[sortField] ?? '';
+                    }
+
+                    if (typeof valA === 'string' && typeof valB === 'string') {
+                        return sortDir === 'asc' ? valA.localeCompare(valB, 'tr-TR') : valB.localeCompare(valA, 'tr-TR');
+                    }
+                    return sortDir === 'asc' ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
+                });
+        }
+
+        // Daraltılmış, Ekrana Tam Sığan Stok Tablosu
+        function renderInventoryTable() {
+            const filtered = getFilteredInventory();
+            const tbody = document.getElementById('inventoryTableBody');
+            const tfoot = document.getElementById('inventoryTableFooter');
+            const emptyState = document.getElementById('inventoryEmptyState');
+
+            tbody.innerHTML = '';
+
+            if (filtered.length === 0) {
+                tfoot.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            tfoot.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+
+            let sumQty = 0;
+            let sumValue = 0;
+
+            filtered.forEach((item, idx) => {
+                const stock = Number(item.stock || 0);
+                const limit = Number(item.criticalLimit || 0);
+                const price = Number(item.unitPrice || 0);
+                const totalVal = stock * price;
+                const quotesCount = (item.supplierQuotes || []).length;
+
+                sumQty += stock;
+                sumValue += totalVal;
+
+                let statusBadge = '';
+                let barColor = 'bg-emerald-500';
+                let rowBg = idx % 2 === 1 ? 'bg-emerald-50/25' : 'bg-white';
+
+                if (stock === 0) {
+                    statusBadge = `<span class="px-1.5 py-0.5 text-[9.5px] font-bold rounded-full bg-rose-100 text-rose-700 border border-rose-200">TÜKENDİ</span>`;
+                    barColor = 'bg-rose-500';
+                    rowBg = 'bg-rose-50/40';
+                } else if (stock <= limit) {
+                    statusBadge = `<span class="px-1.5 py-0.5 text-[9.5px] font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-300">KRİTİK</span>`;
+                    barColor = 'bg-amber-500';
+                    rowBg = 'bg-amber-50/30';
+                } else {
+                    statusBadge = `<span class="px-1.5 py-0.5 text-[9.5px] font-semibold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">NORMAL</span>`;
+                }
+
+                const referenceMax = Math.max(limit * 4, stock, 100);
+                const pct = Math.min(100, Math.round((stock / referenceMax) * 100));
+
+                const tr = document.createElement('tr');
+                tr.className = `${rowBg} hover:bg-emerald-100/40 transition-colors`;
+
+                const photoCellHtml = item.photoUrl
+                    ? `<button type="button" onclick="openPhotoModal('${item.id}')" class="group relative w-10 h-10 mx-auto rounded-lg overflow-hidden border border-emerald-300 shadow-2xs bg-white block cursor-pointer" title="Fotoğrafı Büyüt / Değiştir">
+                           <img src="${item.photoUrl}" alt="${item.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200">
+                           <span class="absolute inset-0 bg-emerald-950/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                               <i data-lucide="zoom-in" class="w-3.5 h-3.5 text-white"></i>
+                           </span>
+                       </button>`
+                    : `<button type="button" onclick="openPhotoModal('${item.id}')" class="w-10 h-10 mx-auto rounded-lg border border-dashed border-emerald-300 hover:border-emerald-600 bg-emerald-50/50 hover:bg-emerald-100/70 text-emerald-600 flex flex-col items-center justify-center gap-0.5 transition cursor-pointer" title="Fotoğraf Ekle">
+                           <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+                           <span class="text-[8.5px] font-bold leading-none">Foto</span>
+                       </button>`;
+
+                const supplierLine = item.supplier
+                    ? `<span class="text-emerald-700 font-semibold">${item.supplier}</span>`
+                    : `<span class="text-slate-400 italic">Tedarikçi girilmedi</span>`;
+
+                const quoteBadgeHtml = quotesCount > 0
+                    ? `<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[9.5px] font-bold mt-0.5">
+                           <i data-lucide="tags" class="w-2.5 h-2.5"></i> ${quotesCount} Teklif
+                       </span>`
+                    : `<span class="inline-flex items-center gap-0.5 text-[9.5px] text-emerald-600 hover:underline mt-0.5">
+                           + Fiyat Ekle
+                       </span>`;
+
+                tr.innerHTML = `
+                    <td class="py-2 px-2 text-center">
+                        ${photoCellHtml}
+                    </td>
+                    <td class="py-2 px-2.5">
+                        <div class="font-bold text-slate-900 text-xs leading-snug">${item.name}</div>
+                        <div class="text-[10.5px] flex items-center gap-1 mt-0.5">
+                            <i data-lucide="truck" class="w-3 h-3 text-emerald-600 flex-shrink-0"></i>
+                            ${supplierLine}
+                        </div>
+                    </td>
+                    <td class="py-2 px-2 hidden md:table-cell">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10.5px] font-medium border ${getCategoryStyle(item.category)}">
+                            ${item.category}
+                        </span>
+                    </td>
+                    <td class="py-2 px-2.5">
+                        <div class="flex items-center justify-between gap-1.5 mb-1">
+                            <span class="font-extrabold text-slate-900 text-xs">${formatNumber(stock)} <span class="text-[10px] font-normal text-slate-500">${item.unit || 'ADET'}</span></span>
+                            ${statusBadge}
+                        </div>
+                        <div class="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                            <div class="h-full ${barColor} rounded-full transition-all duration-300" style="width: ${pct}%"></div>
+                        </div>
+                    </td>
+                    <td class="py-2 px-2 text-center hidden lg:table-cell">
+                        <span class="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                            ${formatNumber(limit)}
+                        </span>
+                    </td>
+                    <td class="py-2 px-2.5 text-right whitespace-nowrap">
+                        <button type="button" onclick="openSupplierQuotesModal('${item.id}')" class="text-right group cursor-pointer hover:bg-emerald-50 px-1.5 py-1 rounded-lg transition inline-flex flex-col items-end" title="Farklı Tedarikçi Fiyatlarını Gör / Ekle">
+                            <span class="font-bold text-slate-800 group-hover:text-emerald-700 text-xs">${formatCurrency(price)}</span>
+                            ${quoteBadgeHtml}
+                        </button>
+                    </td>
+                    <td class="py-2 px-2.5 text-right font-extrabold text-emerald-900 whitespace-nowrap hidden sm:table-cell text-xs">
+                        ${formatCurrency(totalVal)}
+                    </td>
+                    <td class="py-2 px-2.5 hidden xl:table-cell">
+                        <div class="text-[11px] font-medium text-slate-700 truncate max-w-[130px]" title="${item.lastAction || ''}">${item.lastAction || '-'}</div>
+                        <div class="text-[9.5px] text-slate-400">${formatDateTime(item.updatedAt)}</div>
+                    </td>
+                    <td class="py-2 px-2.5 text-right whitespace-nowrap no-print">
+                        <div class="inline-flex items-center gap-1">
+                            <button onclick="openItemTransaction('${item.id}', 'IN')" class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-md shadow-2xs transition cursor-pointer" title="Stok Girişi">
+                                + Giriş
+                            </button>
+                            <button onclick="openItemTransaction('${item.id}', 'OUT')" class="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold rounded-md shadow-2xs transition cursor-pointer" title="Stok Çıkışı">
+                                - Çıkış
+                            </button>
+                            <button onclick="openSupplierQuotesModal('${item.id}')" class="p-1 text-emerald-700 hover:bg-emerald-100 rounded-md transition cursor-pointer" title="Tedarikçi Fiyatları Ekle / Karşılaştır">
+                                <i data-lucide="tags" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="openEditMaterialModal('${item.id}')" class="p-1 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition cursor-pointer" title="Düzenle">
+                                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="confirmDeleteMaterial('${item.id}')" class="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition cursor-pointer" title="Sil">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('filteredSummaryLabel').textContent = `Listelenen ${filtered.length} kalem özeti:`;
+            document.getElementById('filteredTotalQtyCell').textContent = `${formatNumber(sumQty)} Adet`;
+            document.getElementById('filteredTotalValueCell').textContent = formatCurrency(sumValue);
+
+            lucide.createIcons();
+        }
+
+        // Hareket Geçmişi Tablosu
+        function renderHistoryTable() {
+            const tbody = document.getElementById('historyTableBody');
+            const emptyState = document.getElementById('historyEmptyState');
+            const q = historySearchQuery.toLocaleLowerCase('tr-TR').trim();
+
+            const filtered = transactionList.filter(tx => {
+                if (historyTypeFilter !== 'ALL' && tx.type !== historyTypeFilter) return false;
+                if (q) {
+                    const matchItem = (tx.itemName || '').toLocaleLowerCase('tr-TR').includes(q);
+                    const matchNote = (tx.note || '').toLocaleLowerCase('tr-TR').includes(q);
+                    if (!matchItem && !matchNote) return false;
+                }
+                return true;
+            });
+
+            tbody.innerHTML = '';
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            filtered.forEach((tx, idx) => {
+                const isIn = tx.type === 'IN';
+                const badge = isIn
+                    ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-emerald-100 text-emerald-800"><i data-lucide="arrow-down-left" class="w-3 h-3"></i> GİRİŞ</span>`
+                    : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-amber-100 text-amber-800"><i data-lucide="arrow-up-right" class="w-3 h-3"></i> ÇIKIŞ</span>`;
+
+                const qtyText = isIn
+                    ? `<span class="font-extrabold text-emerald-700">+${formatNumber(tx.qty)} ${tx.unit || 'ADET'}</span>`
+                    : `<span class="font-extrabold text-rose-600">-${formatNumber(tx.qty)} ${tx.unit || 'ADET'}</span>`;
+
+                const tr = document.createElement('tr');
+                tr.className = `${idx % 2 === 1 ? 'bg-emerald-50/30' : 'bg-white'} hover:bg-emerald-50/70 transition`;
+                tr.innerHTML = `
+                    <td class="py-2 px-3 text-slate-500 whitespace-nowrap">${formatDateTime(tx.timestamp)}</td>
+                    <td class="py-2 px-3 whitespace-nowrap">${badge}</td>
+                    <td class="py-2 px-3 font-bold text-slate-900">${tx.itemName}</td>
+                    <td class="py-2 px-3 text-right whitespace-nowrap">${qtyText}</td>
+                    <td class="py-2 px-3 text-right text-slate-600 whitespace-nowrap">${formatCurrency(tx.unitPrice)}</td>
+                    <td class="py-2 px-3 text-slate-700">${tx.note || '-'}</td>
+                    <td class="py-2 px-3 text-right font-bold text-emerald-900 whitespace-nowrap">${formatNumber(tx.balanceAfter)} ${tx.unit || 'ADET'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            lucide.createIcons();
+        }
+
+        // Modal Yardımcıları
+        window.closeModal = function(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+            if (modalId === 'supplierQuotesModal') {
+                activeQuoteItemId = null;
+            }
+        };
+
+        function populateTransactionSelect(selectedId = null) {
+            const select = document.getElementById('txItemSelect');
+            const sorted = [...inventoryList].sort((a, b) => a.name.localeCompare(b.name, 'tr-TR'));
+            select.innerHTML = sorted.map(item => 
+                `<option value="${item.id}" ${item.id === selectedId ? 'selected' : ''}>${item.name} (Mevcut: ${formatNumber(item.stock)} ${item.unit || 'ADET'})</option>`
+            ).join('');
+            onTxItemChange();
+        }
+
+        window.onTxItemChange = function() {
+            const id = document.getElementById('txItemSelect').value;
+            const item = inventoryList.find(i => i.id === id);
+            if (item) {
+                document.getElementById('txCurrentStockVal').textContent = `${formatNumber(item.stock)} ${item.unit || 'ADET'}`;
+                document.getElementById('txUnitPrice').value = Number(item.unitPrice || 0).toFixed(2);
+                document.getElementById('txSupplierInput').value = item.supplier || '';
+            }
+        };
+
+        window.openQuickTransactionModal = function(type) {
+            if (inventoryList.length === 0) {
+                showToast("Önce envantere malzeme eklemelisiniz.", "warning");
+                return;
+            }
+            populateTransactionSelect();
+            configureTransactionModal(type);
+            document.getElementById('transactionModal').classList.remove('hidden');
+        };
+
+        window.openItemTransaction = function(itemId, type) {
+            populateTransactionSelect(itemId);
+            configureTransactionModal(type);
+            document.getElementById('transactionModal').classList.remove('hidden');
+        };
+
+        function configureTransactionModal(type) {
+            document.getElementById('txType').value = type;
+            document.getElementById('txQty').value = '';
+            document.getElementById('txNote').value = '';
+
+            const header = document.getElementById('txModalHeader');
+            const title = document.getElementById('txModalTitle');
+            const iconWrap = document.getElementById('txModalIconWrap');
+            const qtyLabel = document.getElementById('txQtyLabel');
+            const partyLabel = document.getElementById('txPartyLabel');
+            const noteInput = document.getElementById('txNote');
+            const priceContainer = document.getElementById('txPriceContainer');
+            const supplierContainer = document.getElementById('txSupplierContainer');
+            const supplierInput = document.getElementById('txSupplierInput');
+            const deptChips = document.getElementById('quickDeptChips');
+            const submitBtn = document.getElementById('txSubmitBtn');
+
+            if (type === 'IN') {
+                header.className = 'px-5 py-3.5 bg-emerald-600 text-white flex items-center justify-between';
+                title.textContent = 'Depoya Stok Girişi Yap';
+                iconWrap.innerHTML = `<i data-lucide="arrow-down-left" class="w-5 h-5"></i>`;
+                qtyLabel.textContent = 'Giriş Miktarı *';
+                partyLabel.textContent = 'İrsaliye / Açıklama *';
+                noteInput.placeholder = 'Örn: İrsaliye No #205';
+                priceContainer.classList.remove('hidden');
+                supplierContainer.classList.remove('hidden');
+                supplierInput.required = true;
+                deptChips.classList.add('hidden');
+                submitBtn.className = 'px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition cursor-pointer';
+                submitBtn.textContent = '+ Stok Girişini Kaydet';
+            } else {
+                header.className = 'px-5 py-3.5 bg-amber-600 text-white flex items-center justify-between';
+                title.textContent = 'Stok Çıkışı / Sarfiyat Kaydet';
+                iconWrap.innerHTML = `<i data-lucide="arrow-up-right" class="w-5 h-5"></i>`;
+                qtyLabel.textContent = 'Çıkış (Sarf) Miktarı *';
+                partyLabel.textContent = 'Teslim Alan Bölüm / Proje / Personel *';
+                noteInput.placeholder = 'Örn: Kaynak & Montaj Atölyesi';
+                priceContainer.classList.add('hidden');
+                supplierContainer.classList.add('hidden');
+                supplierInput.required = false;
+                deptChips.classList.remove('hidden');
+                submitBtn.className = 'px-4 py-2 bg-amber-600 hover:bg-amber-600 text-white text-xs font-bold rounded-xl shadow-sm transition cursor-pointer';
+                submitBtn.textContent = '- Stok Çıkışını Kaydet';
+            }
+            lucide.createIcons();
+        }
+
+        window.setTxNote = function(text) {
+            document.getElementById('txNote').value = text;
+        };
+
+        // Stok Giriş / Çıkış Kaydı
+        window.handleTransactionSubmit = async function(e) {
+            e.preventDefault();
+
+            const type = document.getElementById('txType').value;
+            const itemId = document.getElementById('txItemSelect').value;
+            const qty = parseInt(document.getElementById('txQty').value, 10);
+            const newPrice = parseFloat(document.getElementById('txUnitPrice').value);
+            const supplierName = document.getElementById('txSupplierInput').value.trim();
+            const note = document.getElementById('txNote').value.trim();
+
+            const itemIndex = inventoryList.findIndex(i => i.id === itemId);
+            const item = inventoryList[itemIndex];
+            if (!item || isNaN(qty) || qty <= 0) {
+                showToast("Lütfen geçerli bir miktar girin.", "error");
+                return;
+            }
+
+            const currentStock = Number(item.stock || 0);
+            if (type === 'OUT' && qty > currentStock) {
+                showToast(`Yetersiz stok! Mevcut stok sadece ${formatNumber(currentStock)} ${item.unit || 'ADET'}.`, "error");
+                return;
+            }
+
+            const newStock = type === 'IN' ? currentStock + qty : currentStock - qty;
+            const finalUnitPrice = (type === 'IN' && !isNaN(newPrice) && newPrice >= 0) ? newPrice : Number(item.unitPrice || 0);
+            const updatedSupplier = (type === 'IN' && supplierName) ? supplierName : (item.supplier || '');
+            const fullNote = (type === 'IN' && supplierName) ? `${supplierName} — ${note}` : note;
+            const nowIso = new Date().toISOString();
+            const actionSummary = type === 'IN'
+                ? `+${formatNumber(qty)} Giriş (${supplierName || note})`
+                : `-${formatNumber(qty)} Çıkış (${note})`;
+
+            // Giriş yapıldığında yeni tedarikçi ve fiyatı teklif geçmişine de otomatik kaydet
+            let updatedQuotes = Array.isArray(item.supplierQuotes) ? [...item.supplierQuotes] : [];
+            if (type === 'IN' && supplierName && finalUnitPrice > 0) {
+                updatedQuotes.push({
+                    id: `sq_${Date.now()}`,
+                    supplier: supplierName,
+                    price: finalUnitPrice,
+                    note: `Stok Alımı (${note})`,
+                    date: nowIso
+                });
+            }
+
+            const submitBtn = document.getElementById('txSubmitBtn');
+            submitBtn.disabled = true;
+
+            try {
+                if (storageMode === 'CLOUD' && currentUser) {
+                    await updateDoc(doc(getInventoryCol(), itemId), {
+                        stock: newStock,
+                        unitPrice: finalUnitPrice,
+                        supplier: updatedSupplier,
+                        supplierQuotes: updatedQuotes,
+                        lastAction: actionSummary,
+                        updatedAt: nowIso
+                    });
+
+                    await addDoc(getTransactionsCol(), {
+                        itemId: itemId,
+                        itemName: item.name,
+                        type: type,
+                        qty: qty,
+                        unit: item.unit || 'ADET',
+                        unitPrice: finalUnitPrice,
+                        note: fullNote,
+                        balanceAfter: newStock,
+                        timestamp: nowIso,
+                        userId: currentUser.uid
+                    });
+                } else {
+                    inventoryList[itemIndex] = {
+                        ...item,
+                        stock: newStock,
+                        unitPrice: finalUnitPrice,
+                        supplier: updatedSupplier,
+                        supplierQuotes: updatedQuotes,
+                        lastAction: actionSummary,
+                        updatedAt: nowIso
+                    };
+                    transactionList.unshift({
+                        id: `tx_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                        itemId: itemId,
+                        itemName: item.name,
+                        type: type,
+                        qty: qty,
+                        unit: item.unit || 'ADET',
+                        unitPrice: finalUnitPrice,
+                        note: fullNote,
+                        balanceAfter: newStock,
+                        timestamp: nowIso,
+                        userId: 'local_user'
+                    });
+                    saveLocalState();
+                    refreshAllViews();
+                }
+
+                closeModal('transactionModal');
+                showToast(
+                    type === 'IN'
+                        ? `${item.name} stoğuna +${formatNumber(qty)} adet eklendi.`
+                        : `${item.name} stoğundan -${formatNumber(qty)} adet düşüldü.`,
+                    type === 'IN' ? 'success' : 'warning'
+                );
+            } catch (err) {
+                console.error("Stok hareket hatası:", err);
+                showToast("İşlem kaydedilirken hata oluştu.", "error");
+            } finally {
+                submitBtn.disabled = false;
+            }
+        };
+
+        // Yeni Malzeme Ekleme Modalı (Tedarikçi alanı boş açılır)
+        window.openAddMaterialModal = function() {
+            document.getElementById('matId').value = '';
+            document.getElementById('matModalTitle').textContent = 'Yeni Sarf Malzemesi Ekle';
+            document.getElementById('matName').value = '';
+            document.getElementById('matCategory').value = 'Cıvata & Somun & Pul';
+            document.getElementById('matUnit').value = 'ADET';
+            document.getElementById('matStock').value = '0';
+            document.getElementById('matCriticalLimit').value = '500';
+            document.getElementById('matUnitPrice').value = '0.00';
+            document.getElementById('matSupplier').value = '';
+            clearModalPhoto();
+            document.getElementById('matInitialStockGroup').classList.remove('hidden');
+            document.getElementById('matSubmitBtn').textContent = 'Malzemeyi Oluştur';
+            document.getElementById('materialModal').classList.remove('hidden');
+        };
+
+        // Malzeme Düzenleme Modalı
+        window.openEditMaterialModal = function(itemId) {
+            const item = inventoryList.find(i => i.id === itemId);
+            if (!item) return;
+
+            document.getElementById('matId').value = item.id;
+            document.getElementById('matModalTitle').textContent = 'Sarf Malzemesi Kartını Düzenle';
+            document.getElementById('matName').value = item.name;
+            document.getElementById('matCategory').value = item.category || 'Diğer Sarf';
+            document.getElementById('matUnit').value = item.unit || 'ADET';
+            document.getElementById('matStock').value = item.stock || 0;
+            document.getElementById('matCriticalLimit').value = item.criticalLimit || 0;
+            document.getElementById('matUnitPrice').value = Number(item.unitPrice || 0).toFixed(2);
+            document.getElementById('matSupplier').value = item.supplier || '';
+            setModalPhotoPreview(item.photoUrl || '');
+            document.getElementById('matInitialStockGroup').classList.add('hidden');
+            document.getElementById('matSubmitBtn').textContent = 'Değişiklikleri Kaydet';
+            document.getElementById('materialModal').classList.remove('hidden');
+        };
+
+        // Modal İçi Fotoğraf Önizlemesi
+        function setModalPhotoPreview(dataUrl) {
+            document.getElementById('matPhotoData').value = dataUrl || '';
+            const box = document.getElementById('matPhotoPreviewBox');
+            const removeBtn = document.getElementById('matRemovePhotoBtn');
+            if (dataUrl) {
+                box.innerHTML = `<img src="${dataUrl}" alt="Önizleme" class="w-full h-full object-cover">`;
+                box.classList.remove('border-dashed');
+                removeBtn.classList.remove('hidden');
+            } else {
+                box.innerHTML = `<i data-lucide="camera" class="w-5 h-5 text-emerald-500"></i>`;
+                box.classList.add('border-dashed');
+                removeBtn.classList.add('hidden');
+                lucide.createIcons();
+            }
+        }
+
+        window.clearModalPhoto = function() {
+            document.getElementById('matPhotoInput').value = '';
+            setModalPhotoPreview('');
+        };
+
+        window.handleModalPhotoSelect = async function(e) {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            try {
+                const compressed = await compressImageFile(file);
+                setModalPhotoPreview(compressed);
+            } catch (err) {
+                showToast(err.message || "Fotoğraf yüklenemedi.", "error");
+            }
+        };
+
+        // Tablo Başındaki Fotoğraf Hücresi Modalı
+        window.openPhotoModal = function(itemId) {
+            const item = inventoryList.find(i => i.id === itemId);
+            if (!item) return;
+            activePhotoItemId = itemId;
+            document.getElementById('photoModalTitle').textContent = item.name;
+            document.getElementById('quickPhotoInput').value = '';
+
+            const container = document.getElementById('photoModalPreviewContainer');
+            const deleteBtn = document.getElementById('quickPhotoDeleteBtn');
+
+            if (item.photoUrl) {
+                container.innerHTML = `<img src="${item.photoUrl}" alt="${item.name}" class="w-full h-full object-contain bg-white">`;
+                container.classList.remove('border-dashed');
+                deleteBtn.classList.remove('hidden');
+            } else {
+                container.innerHTML = `
+                    <i data-lucide="camera" class="w-11 h-11 text-emerald-300 mb-2"></i>
+                    <p class="text-xs font-bold text-slate-600">Henüz fotoğraf eklenmemiş</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Aşağıdaki butondan fotoğraf yükleyebilirsiniz</p>
+                `;
+                container.classList.add('border-dashed');
+                deleteBtn.classList.add('hidden');
+            }
+            lucide.createIcons();
+            document.getElementById('photoModal').classList.remove('hidden');
+        };
+
+        window.handleQuickPhotoUpload = async function(e) {
+            const file = e.target.files?.[0];
+            if (!file || !activePhotoItemId) return;
+
+            const btn = document.getElementById('quickPhotoUploadBtn');
+            btn.disabled = true;
+
+            try {
+                const compressed = await compressImageFile(file);
+                const nowIso = new Date().toISOString();
+
+                if (storageMode === 'CLOUD' && currentUser) {
+                    await updateDoc(doc(getInventoryCol(), activePhotoItemId), {
+                        photoUrl: compressed,
+                        updatedAt: nowIso
+                    });
+                } else {
+                    const idx = inventoryList.findIndex(i => i.id === activePhotoItemId);
+                    if (idx !== -1) {
+                        inventoryList[idx].photoUrl = compressed;
+                        inventoryList[idx].updatedAt = nowIso;
+                        saveLocalState();
+                        refreshAllViews();
+                    }
+                }
+                openPhotoModal(activePhotoItemId);
+                showToast("Ürün fotoğrafı kaydedildi.");
+            } catch (err) {
+                console.error("Fotoğraf kaydetme hatası:", err);
+                showToast("Fotoğraf kaydedilirken hata oluştu.", "error");
+            } finally {
+                btn.disabled = false;
+            }
+        };
+
+        window.deleteItemPhoto = async function() {
+            if (!activePhotoItemId) return;
+            const nowIso = new Date().toISOString();
+            try {
+                if (storageMode === 'CLOUD' && currentUser) {
+                    await updateDoc(doc(getInventoryCol(), activePhotoItemId), {
+                        photoUrl: '',
+                        updatedAt: nowIso
+                    });
+                } else {
+                    const idx = inventoryList.findIndex(i => i.id === activePhotoItemId);
+                    if (idx !== -1) {
+                        inventoryList[idx].photoUrl = '';
+                        inventoryList[idx].updatedAt = nowIso;
+                        saveLocalState();
+                        refreshAllViews();
+                    }
+                }
+                openPhotoModal(activePhotoItemId);
+                showToast("Ürün fotoğrafı kaldırıldı.", "warning");
+            } catch (err) {
+                console.error("Fotoğraf silme hatası:", err);
+                showToast("Fotoğraf kaldırılamadı.", "error");
+            }
+        };
+
+        // =========================================================================
+        // ÇOKLU TEDARİKÇİ FİYAT TEKLİFLERİ YÖNETİMİ
+        // =========================================================================
+        window.openSupplierQuotesModal = function(itemId) {
+            const item = inventoryList.find(i => i.id === itemId);
+            if (!item) return;
+
+            activeQuoteItemId = itemId;
+            document.getElementById('sqItemNameSubtitle').textContent = `${item.name} (Aktif Fiyat: ${formatCurrency(item.unitPrice)})`;
+            document.getElementById('sqSupplierName').value = '';
+            document.getElementById('sqPrice').value = '';
+            document.getElementById('sqNote').value = '';
+            document.getElementById('sqSetAsActive').checked = false;
+
+            renderSupplierQuotesTable(itemId);
+            document.getElementById('supplierQuotesModal').classList.remove('hidden');
+        };
+
+        function renderSupplierQuotesTable(itemId) {
+            const item = inventoryList.find(i => i.id === itemId);
+            if (!item) return;
+
+            const quotes = Array.isArray(item.supplierQuotes) ? [...item.supplierQuotes] : [];
+            // En uygun (düşük) fiyata göre sırala
+            quotes.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+
+            document.getElementById('sqCountBadge').textContent = `${quotes.length} Teklif`;
+            document.getElementById('sqItemNameSubtitle').textContent = `${item.name} (Aktif Fiyat: ${formatCurrency(item.unitPrice)} — ${item.supplier || 'Tedarikçi Belirtilmemiş'})`;
+
+            const tbody = document.getElementById('sqTableBody');
+            const emptyState = document.getElementById('sqEmptyState');
+            tbody.innerHTML = '';
+
+            if (quotes.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            quotes.forEach((q, idx) => {
+                const isBest = idx === 0;
+                const tr = document.createElement('tr');
+                tr.className = isBest ? 'bg-emerald-50/70' : 'bg-white hover:bg-slate-50';
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3">
+                        <div class="font-bold text-slate-900 flex items-center gap-1.5">
+                            <span>${q.supplier}</span>
+                            ${isBest ? `<span class="px-1.5 py-0.5 text-[9px] font-extrabold bg-emerald-600 text-white rounded">EN UYGUN</span>` : ''}
+                        </div>
+                    </td>
+                    <td class="py-2.5 px-3 text-right font-extrabold text-emerald-800 whitespace-nowrap">
+                        ${formatCurrency(q.price)}
+                    </td>
+                    <td class="py-2.5 px-3 text-slate-600">
+                        <div>${q.note || '-'}</div>
+                        <div class="text-[10px] text-slate-400">${formatDateTime(q.date)}</div>
+                    </td>
+                    <td class="py-2.5 px-3 text-right whitespace-nowrap">
+                        <div class="inline-flex items-center gap-1">
+                            <button type="button" onclick="applySupplierQuoteAsActive('${item.id}', '${q.id}')" class="px-2 py-1 bg-emerald-100 hover:bg-emerald-600 text-emerald-800 hover:text-white text-[10.5px] font-bold rounded transition cursor-pointer" title="Bu tedarikçiyi ve fiyatı aktif yap">
+                                Aktif Yap
+                            </button>
+                            <button type="button" onclick="deleteSupplierQuote('${item.id}', '${q.id}')" class="p-1 text-slate-400 hover:text-rose-600 rounded transition cursor-pointer" title="Teklifi Sil">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons();
+        }
+
+        window.handleAddSupplierQuote = async function(e) {
+            e.preventDefault();
+            if (!activeQuoteItemId) return;
+
+            const supplier = document.getElementById('sqSupplierName').value.trim();
+            const price = parseFloat(document.getElementById('sqPrice').value);
+            const note = document.getElementById('sqNote').value.trim();
+            const setAsActive = document.getElementById('sqSetAsActive').checked;
+
+            if (!supplier || isNaN(price) || price < 0) {
+                showToast("Lütfen tedarikçi adı ve geçerli bir fiyat girin.", "error");
+                return;
+            }
+
+            const itemIndex = inventoryList.findIndex(i => i.id === activeQuoteItemId);
+            const item = inventoryList[itemIndex];
+            if (!item) return;
+
+            const nowIso = new Date().toISOString();
+            const existingQuotes = Array.isArray(item.supplierQuotes) ? [...item.supplierQuotes] : [];
+            existingQuotes.push({
+                id: `sq_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                supplier,
+                price,
+                note,
+                date: nowIso
+            });
+
+            const updatePayload = {
+                supplierQuotes: existingQuotes,
+                updatedAt: nowIso
+            };
+
+            if (setAsActive) {
+                updatePayload.supplier = supplier;
+                updatePayload.unitPrice = price;
+                updatePayload.lastAction = `Fiyat Güncellendi (${supplier}: ${formatCurrency(price)})`;
+            }
+
+            try {
+                if (storageMode === 'CLOUD' && currentUser) {
+                    await updateDoc(doc(getInventoryCol(), activeQuoteItemId), updatePayload);
+                } else {
+                    inventoryList[itemIndex] = { ...item, ...updatePayload };
+                    saveLocalState();
+                    refreshAllViews();
+                }
+
+                document.getElementById('sqSupplierName').value = '';
+                document.getElementById('sqPrice').value = '';
+                document.getElementById('sqNote').value = '';
+                document.getElementById('sqSetAsActive').checked = false;
+                renderSupplierQuotesTable(activeQuoteItemId);
+                showToast(`${supplier} firmasının fiyat teklifi eklendi.`);
+            } catch (err) {
+                console.error("Teklif ekleme hatası:", err);
+                showToast("Teklif eklenirken hata oluştu.", "error");
+            }
+        };
+
+        window.applySupplierQuoteAsActive = async function(itemId, quoteId) {
+            const itemIndex = inventoryList.findIndex(i => i.id === itemId);
+            const item = inventoryList[itemIndex];
+            if (!item) return;
+
+            const quote = (item.supplierQuotes || []).find(q => q.id === quoteId);
+            if (!quote) return;
+
+            const nowIso = new Date().toISOString();
+            const updatePayload = {
+                supplier: quote.supplier,
+                unitPrice: Number(quote.price),
+                lastAction: `Tedarikçi Seçildi (${quote.supplier})`,
+                updatedAt: nowIso
+            };
+
+            try {
+                if (storageMode === 'CLOUD' && currentUser) {
+                    await updateDoc(doc(getInventoryCol(), itemId), updatePayload);
+                } else {
+                    inventoryList[itemIndex] = { ...item, ...updatePayload };
+                    saveLocalState();
+                    refreshAllViews();
+                }
+                renderSupplierQuotesTable(itemId);
+                showToast(`Aktif tedarikçi ve fiyat güncellendi: ${quote.supplier} (${formatCurrency(quote.price)})`);
+            } catch (err) {
+                console.error("Aktif teklif atama hatası:", err);
+                showToast("Güncelleme başarısız oldu.", "error");
+            }
+        };
+
+        window.deleteSupplierQuote = async function(itemId, quoteId) {
+            const itemIndex = inventoryList.findIndex(i => i.id === itemId);
+            const item = inventoryList[itemIndex];
+            if (!item) return;
+
+            const filteredQuotes = (item.supplierQuotes || []).filter(q => q.id !== quoteId);
+            const nowIso = new Date().toISOString();
+
+            try {
+                if (storageMode === 'CLOUD' && currentUser) {
+                    await updateDoc(doc(getInventoryCol(), itemId), {
+                        supplierQuotes: filteredQuotes,
+                        updatedAt: nowIso
+                    });
+                } else {
+                    inventoryList[itemIndex] = { ...item, supplierQuotes: filteredQuotes, updatedAt: nowIso };
+                    saveLocalState();
+                    refreshAllViews();
+                }
+                renderSupplierQuotesTable(itemId);
+                showToast("Tedarikçi teklifi silindi.", "warning");
+            } catch (err) {
+                console.error("Teklif silme hatası:", err);
+                showToast("Silme işlemi başarısız.", "error");
+            }
+        };
+
+        // Yeni Malzeme / Düzenleme Kayıt
+        window.handleMaterialSubmit = async function(e) {
+            e.preventDefault();
+
+            const editId = document.getElementById('matId').value;
+            const name = document.getElementById('matName').value.trim().toUpperCase();
+            const category = document.getElementById('matCategory').value;
+            const unit = document.getElementById('matUnit').value;
+            const stock = parseInt(document.getElementById('matStock').value, 10) || 0;
+            const criticalLimit = parseInt(document.getElementById('matCriticalLimit').value, 10) || 0;
+            const unitPrice = parseFloat(document.getElementById('matUnitPrice').value) || 0;
+            const supplier = document.getElementById('matSupplier').value.trim();
+            const photoUrl = document.getElementById('matPhotoData').value || '';
+            const nowIso = new Date().toISOString();
+
+            const btn = document.getElementById('matSubmitBtn');
+            btn.disabled = true;
+
+            // Yeni malzeme girilirken tedarikçi ve fiyat yazıldıysa ilk teklif olarak da listeye ekle
+            const initialQuotes = (supplier && unitPrice > 0)
+                ? [{ id: `sq_${Date.now()}`, supplier, price: unitPrice, note: 'İlk Kayıt Fiyatı', date: nowIso }]
+                : [];
+
+            try {
+                if (storageMode === 'CLOUD' && currentUser) {
+                    if (editId) {
+                        await updateDoc(doc(getInventoryCol(), editId), {
+                            name, category, unit, criticalLimit, unitPrice, supplier, photoUrl, updatedAt: nowIso
+                        });
+                        showToast(`"${name}" kartı güncellendi.`);
+                    } else {
+                        const maxOrder = inventoryList.reduce((max, i) => Math.max(max, Number(i.orderIndex || 0)), 0);
+                        const newDocRef = await addDoc(getInventoryCol(), {
+                            orderIndex: maxOrder + 1,
+                            name, category, unit, stock, criticalLimit, unitPrice, supplier, photoUrl,
+                            supplierQuotes: initialQuotes,
+                            lastAction: stock > 0 ? `İlk Kayıt (+${formatNumber(stock)})` : 'Yeni Kart Oluşturuldu',
+                            updatedAt: nowIso
+                        });
+
+                        if (stock > 0) {
+                            await addDoc(getTransactionsCol(), {
+                                itemId: newDocRef.id,
+                                itemName: name,
+                                type: 'IN',
+                                qty: stock,
+                                unit,
+                                unitPrice,
+                                note: `${supplier || 'Depo'} — Yeni Malzeme Açılış Stoğu`,
+                                balanceAfter: stock,
+                                timestamp: nowIso,
+                                userId: currentUser.uid
+                            });
+                        }
+                        showToast(`"${name}" envantere eklendi.`);
+                    }
+                } else {
+                    if (editId) {
+                        const idx = inventoryList.findIndex(i => i.id === editId);
+                        if (idx !== -1) {
+                            inventoryList[idx] = {
+                                ...inventoryList[idx],
+                                name, category, unit, criticalLimit, unitPrice, supplier, photoUrl, updatedAt: nowIso
+                            };
+                        }
+                        showToast(`"${name}" kartı güncellendi.`);
+                    } else {
+                        const maxOrder = inventoryList.reduce((max, i) => Math.max(max, Number(i.orderIndex || 0)), 0);
+                        const newId = `item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+                        inventoryList.push({
+                            id: newId,
+                            orderIndex: maxOrder + 1,
+                            name, category, unit, stock, criticalLimit, unitPrice, supplier, photoUrl,
+                            supplierQuotes: initialQuotes,
+                            lastAction: stock > 0 ? `İlk Kayıt (+${formatNumber(stock)})` : 'Yeni Kart Oluşturuldu',
+                            updatedAt: nowIso
+                        });
+
+                        if (stock > 0) {
+                            transactionList.unshift({
+                                id: `tx_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                                itemId: newId,
+                                itemName: name,
+                                type: 'IN',
+                                qty: stock,
+                                unit,
+                                unitPrice,
+                                note: `${supplier || 'Depo'} — Yeni Malzeme Açılış Stoğu`,
+                                balanceAfter: stock,
+                                timestamp: nowIso,
+                                userId: 'local_user'
+                            });
+                        }
+                        showToast(`"${name}" envantere eklendi.`);
+                    }
+                    saveLocalState();
+                    refreshAllViews();
+                }
+                closeModal('materialModal');
+            } catch (err) {
+                console.error("Malzeme kayıt hatası:", err);
+                showToast("Kayıt sırasında hata oluştu.", "error");
+            } finally {
+                btn.disabled = false;
+            }
+        };
+
+        // Silme Onayı ve İşlemi
+        window.confirmDeleteMaterial = function(itemId) {
+            const item = inventoryList.find(i => i.id === itemId);
+            if (!item) return;
+            pendingDeleteId = itemId;
+            document.getElementById('deleteItemName').textContent = item.name;
+            document.getElementById('deleteModal').classList.remove('hidden');
+        };
+
+        window.executeDeleteMaterial = async function() {
+            if (!pendingDeleteId) return;
+            try {
+                if (storageMode === 'CLOUD' && currentUser) {
+                    await deleteDoc(doc(getInventoryCol(), pendingDeleteId));
+                } else {
+                    inventoryList = inventoryList.filter(i => i.id !== pendingDeleteId);
+                    saveLocalState();
+                    refreshAllViews();
+                }
+                showToast("Malzeme stok kartı silindi.");
+            } catch (err) {
+                console.error("Silme hatası:", err);
+                showToast("Silme işlemi başarısız oldu.", "error");
+            } finally {
+                pendingDeleteId = null;
+                closeModal('deleteModal');
+            }
+        };
+
+        // Sekme Geçişleri
+        window.switchTab = function(tabName) {
+            activeTab = tabName;
+            const invView = document.getElementById('viewInventory');
+            const supView = document.getElementById('viewSuppliers');
+            const histView = document.getElementById('viewHistory');
+            const btnInv = document.getElementById('tabBtnInventory');
+            const btnSup = document.getElementById('tabBtnSuppliers');
+            const btnHist = document.getElementById('tabBtnHistory');
+
+            const activeCls = 'px-3.5 py-2.5 text-xs sm:text-sm font-bold border-b-2 border-emerald-600 text-emerald-900 flex items-center gap-2 whitespace-nowrap transition cursor-pointer';
+            const inactiveCls = 'px-3.5 py-2.5 text-xs sm:text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-emerald-800 flex items-center gap-2 whitespace-nowrap transition cursor-pointer';
+
+            invView.classList.add('hidden');
+            supView.classList.add('hidden');
+            histView.classList.add('hidden');
+            btnInv.className = inactiveCls;
+            btnSup.className = inactiveCls;
+            btnHist.className = inactiveCls;
+
+            if (tabName === 'inventory') {
+                invView.classList.remove('hidden');
+                btnInv.className = activeCls;
+            } else if (tabName === 'suppliers') {
+                supView.classList.remove('hidden');
+                btnSup.className = activeCls;
+                renderSuppliersPage();
+            } else {
+                histView.classList.remove('hidden');
+                btnHist.className = activeCls;
+            }
+            lucide.createIcons();
+        };
+
+        // =========================================================================
+        // TEDARİKÇİLER & FİYAT ANALİZİ SAYFASI MANTIĞI
+        // =========================================================================
+        function collectAllSuppliersData() {
+            const supplierMap = new Map();
+
+            const ensureSupplier = (rawName) => {
+                const name = (rawName || '').trim();
+                if (!name) return null;
+                const key = name.toLocaleLowerCase('tr-TR');
+                if (!supplierMap.has(key)) {
+                    const prof = supplierProfiles.find(p => (p.name || '').trim().toLocaleLowerCase('tr-TR') === key) || {};
+                    supplierMap.set(key, {
+                        key,
+                        name: prof.name || name,
+                        profileId: prof.id || null,
+                        contactPerson: prof.contactPerson || '',
+                        phone: prof.phone || '',
+                        city: prof.city || '',
+                        paymentTerm: prof.paymentTerm || '',
+                        notes: prof.notes || '',
+                        quotedItems: [],
+                        bestPriceCount: 0,
+                        activeAssignedCount: 0,
+                        totalQuotedSum: 0
+                    });
+                }
+                return supplierMap.get(key);
+            };
+
+            // Önce kayıtlı tedarikçi profillerini ekle
+            supplierProfiles.forEach(p => ensureSupplier(p.name));
+
+            // Ürünlerdeki aktif tedarikçileri ve teklifleri analiz et
+            inventoryList.forEach(item => {
+                const itemQuotes = [];
+                if (item.supplier && Number(item.unitPrice) > 0) {
+                    itemQuotes.push({ supplier: item.supplier.trim(), price: Number(item.unitPrice), isActive: true });
+                }
+                (item.supplierQuotes || []).forEach(q => {
+                    if (q.supplier && Number(q.price) >= 0) {
+                        itemQuotes.push({ supplier: q.supplier.trim(), price: Number(q.price), note: q.note || '', date: q.date || '' });
+                    }
+                });
+
+                // Firma bazında o ürün için en düşük teklifini bul
+                const perSupplierBestForItem = new Map();
+                itemQuotes.forEach(q => {
+                    const k = q.supplier.toLocaleLowerCase('tr-TR');
+                    if (!perSupplierBestForItem.has(k) || q.price < perSupplierBestForItem.get(k).price) {
+                        perSupplierBestForItem.set(k, q);
+                    }
+                });
+
+                // Bu ürün için tüm tedarikçiler arasındaki en düşük fiyatı tespit et
+                let globalMinPrice = Infinity;
+                perSupplierBestForItem.forEach(val => {
+                    if (val.price < globalMinPrice) globalMinPrice = val.price;
+                });
+
+                if (item.supplier) {
+                    const activeSupObj = ensureSupplier(item.supplier);
+                    if (activeSupObj) activeSupObj.activeAssignedCount++;
+                }
+
+                perSupplierBestForItem.forEach((qVal, k) => {
+                    const supObj = ensureSupplier(qVal.supplier);
+                    if (!supObj) return;
+                    const isBestForThisItem = qVal.price === globalMinPrice && perSupplierBestForItem.size > 0;
+                    if (isBestForThisItem) supObj.bestPriceCount++;
+                    supObj.totalQuotedSum += qVal.price;
+                    supObj.quotedItems.push({
+                        itemId: item.id,
+                        itemName: item.name,
+                        price: qVal.price,
+                        isBest: isBestForThisItem,
+                        stock: Number(item.stock || 0)
+                    });
+                });
+            });
+
+            return Array.from(supplierMap.values()).sort((a, b) => b.bestPriceCount - a.bestPriceCount || b.quotedItems.length - a.quotedItems.length);
+        }
+
+        window.renderSuppliersPage = function() {
+            const suppliers = collectAllSuppliersData();
+            document.getElementById('tabBadgeSuppliers').textContent = suppliers.length;
+
+            // Tedarikçi filtre açılır listesini güncelle
+            const filterSelect = document.getElementById('supplierFilterSelect');
+            const prevVal = filterSelect.value;
+            filterSelect.innerHTML = `<option value="ALL">Tüm Tedarikçiler (${suppliers.length})</option>` +
+                suppliers.map(s => `<option value="${s.key}">${s.name} (${s.quotedItems.length} Ürün)</option>`).join('');
+            if (Array.from(filterSelect.options).some(o => o.value === prevVal)) {
+                filterSelect.value = prevVal;
+            }
+
+            const grid = document.getElementById('supplierCardsGrid');
+            const emptyBanner = document.getElementById('suppliersEmptyBanner');
+            grid.innerHTML = '';
+
+            if (suppliers.length === 0) {
+                emptyBanner.classList.remove('hidden');
+            } else {
+                emptyBanner.classList.add('hidden');
+                suppliers.forEach((sup, idx) => {
+                    const isLeader = idx === 0 && sup.bestPriceCount > 0;
+                    const card = document.createElement('div');
+                    card.className = `bg-white rounded-xl p-4 border ${isLeader ? 'border-emerald-400 ring-1 ring-emerald-200' : 'border-emerald-200'} shadow-xs flex flex-col justify-between space-y-3`;
+
+                    const topItemsPreview = sup.quotedItems.slice(0, 3).map(qi =>
+                        `<div class="flex items-center justify-between text-[11px] py-1 border-b border-emerald-50 last:border-0">
+                            <span class="truncate pr-2 text-slate-700 font-medium">${qi.itemName}</span>
+                            <span class="font-bold whitespace-nowrap ${qi.isBest ? 'text-emerald-700' : 'text-slate-600'}">
+                                ${formatCurrency(qi.price)} ${qi.isBest ? '★' : ''}
+                            </span>
+                        </div>`
+                    ).join('');
+
+                    card.innerHTML = `
+                        <div>
+                            <div class="flex items-start justify-between gap-2">
+                                <div>
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        <h4 class="font-extrabold text-sm text-slate-900">${sup.name}</h4>
+                                        ${isLeader ? `<span class="px-2 py-0.5 text-[9.5px] font-extrabold bg-emerald-600 text-white rounded-full">EN UYGUN LİDER</span>` : ''}
+                                    </div>
+                                    <div class="text-[11px] text-slate-500 mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                        ${sup.contactPerson ? `<span><i data-lucide="user" class="w-3 h-3 inline text-emerald-600"></i> ${sup.contactPerson}</span>` : ''}
+                                        ${sup.phone ? `<span><i data-lucide="phone" class="w-3 h-3 inline text-emerald-600"></i> ${sup.phone}</span>` : ''}
+                                        ${sup.city ? `<span><i data-lucide="map-pin" class="w-3 h-3 inline text-emerald-600"></i> ${sup.city}</span>` : ''}
+                                    </div>
+                                </div>
+                                <button onclick="openEditSupplierModal('${sup.name.replace(/'/g, "\\'")}')" class="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition cursor-pointer" title="Firma Bilgilerini Düzenle">
+                                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+
+                            <!-- İstatistik Kutucukları -->
+                            <div class="grid grid-cols-3 gap-2 mt-3 text-center">
+                                <div class="bg-emerald-50/80 rounded-lg p-2 border border-emerald-100">
+                                    <div class="text-sm font-extrabold text-emerald-900">${sup.quotedItems.length}</div>
+                                    <div class="text-[10px] font-semibold text-slate-500">Fiyat Verilen</div>
+                                </div>
+                                <div class="bg-emerald-100/70 rounded-lg p-2 border border-emerald-200">
+                                    <div class="text-sm font-extrabold text-emerald-700">${sup.bestPriceCount}</div>
+                                    <div class="text-[10px] font-bold text-emerald-800">En Uygun Ürün</div>
+                                </div>
+                                <div class="bg-slate-50 rounded-lg p-2 border border-slate-200">
+                                    <div class="text-sm font-extrabold text-slate-800">${sup.activeAssignedCount}</div>
+                                    <div class="text-[10px] font-semibold text-slate-500">Aktif Tedarik</div>
+                                </div>
+                            </div>
+
+                            <!-- Verdiği Fiyatlardan Örnekler -->
+                            <div class="mt-3">
+                                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Verdiği Fiyatlar (Özet)</div>
+                                ${sup.quotedItems.length > 0 ? topItemsPreview : `<p class="text-[11px] text-slate-400 italic py-1">Henüz fiyat teklifi girilmemiş.</p>`}
+                            </div>
+                        </div>
+
+                        <div class="pt-2 border-t border-emerald-100 flex items-center justify-between text-[11px]">
+                            <span class="text-slate-500 truncate max-w-[170px]" title="${sup.paymentTerm || sup.notes || ''}">
+                                ${sup.paymentTerm ? `Vade: <strong>${sup.paymentTerm}</strong>` : (sup.notes || 'Koşul belirtilmedi')}
+                            </span>
+                            <button onclick="filterMatrixBySupplier('${sup.key}')" class="font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 cursor-pointer">
+                                <span>Tümünü Gör</span>
+                                <i data-lucide="arrow-down" class="w-3 h-3"></i>
+                            </button>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+
+            renderSupplierComparisonMatrix();
+            lucide.createIcons();
+        };
+
+        window.filterMatrixBySupplier = function(supplierKey) {
+            const sel = document.getElementById('supplierFilterSelect');
+            sel.value = supplierKey;
+            renderSupplierComparisonMatrix();
+            sel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        };
+
+        window.renderSupplierComparisonMatrix = function() {
+            const tbody = document.getElementById('supplierComparisonBody');
+            const selectedSupKey = document.getElementById('supplierFilterSelect').value;
+            const onlyQuoted = document.getElementById('onlyQuotedItemsCheckbox').checked;
+            const qText = (document.getElementById('supplierMatrixSearch').value || '').toLocaleLowerCase('tr-TR').trim();
+
+            tbody.innerHTML = '';
+
+            const rows = inventoryList.filter(item => {
+                const allQuotes = [];
+                if (item.supplier && Number(item.unitPrice) > 0) {
+                    allQuotes.push({ supplier: item.supplier.trim(), price: Number(item.unitPrice) });
+                }
+                (item.supplierQuotes || []).forEach(q => {
+                    if (q.supplier) allQuotes.push({ supplier: q.supplier.trim(), price: Number(q.price || 0) });
+                });
+
+                if (onlyQuoted && allQuotes.length === 0) return false;
+                if (selectedSupKey !== 'ALL') {
+                    const hasSup = allQuotes.some(q => q.supplier.toLocaleLowerCase('tr-TR') === selectedSupKey);
+                    if (!hasSup) return false;
+                }
+                if (qText) {
+                    const matchName = (item.name || '').toLocaleLowerCase('tr-TR').includes(qText);
+                    const matchSup = allQuotes.some(q => q.supplier.toLocaleLowerCase('tr-TR').includes(qText));
+                    if (!matchName && !matchSup) return false;
+                }
+                return true;
+            });
+
+            if (rows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-xs text-slate-500">Seçilen kriterlere uygun fiyat karşılaştırma kaydı bulunamadı.</td></tr>`;
+                return;
+            }
+
+            rows.forEach((item, idx) => {
+                // Tedarikçi bazında tekilleştirilmiş en düşük teklifleri topla
+                const mapBySup = new Map();
+                if (item.supplier && Number(item.unitPrice) > 0) {
+                    mapBySup.set(item.supplier.trim().toLocaleLowerCase('tr-TR'), {
+                        supplier: item.supplier.trim(),
+                        price: Number(item.unitPrice),
+                        note: 'Aktif Fiyat'
+                    });
+                }
+                (item.supplierQuotes || []).forEach(q => {
+                    if (!q.supplier) return;
+                    const k = q.supplier.trim().toLocaleLowerCase('tr-TR');
+                    const p = Number(q.price || 0);
+                    if (!mapBySup.has(k) || p < mapBySup.get(k).price) {
+                        mapBySup.set(k, { supplier: q.supplier.trim(), price: p, note: q.note || '' });
+                    }
+                });
+
+                const sortedOffers = Array.from(mapBySup.values()).sort((a, b) => a.price - b.price);
+                const bestOffer = sortedOffers[0] || null;
+                const currentPrice = Number(item.unitPrice || 0);
+
+                let diffHtml = `<span class="text-slate-400">-</span>`;
+                if (bestOffer && currentPrice > 0) {
+                    const diff = currentPrice - bestOffer.price;
+                    if (diff > 0.009) {
+                        const pctSave = Math.round((diff / currentPrice) * 100);
+                        diffHtml = `<span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10.5px]" title="En uygun tedarikçiye geçilirse birim başına tasarruf">-%${pctSave} (${formatCurrency(diff)})</span>`;
+                    } else {
+                        diffHtml = `<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10.5px]">En Uygun Aktif</span>`;
+                    }
+                }
+
+                const offersPills = sortedOffers.length > 0
+                    ? sortedOffers.map((off, i) => `
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] border ${i === 0 ? 'bg-emerald-100/90 border-emerald-400 text-emerald-950 font-bold' : 'bg-slate-50 border-slate-200 text-slate-700'}">
+                            <span>${off.supplier}:</span>
+                            <strong>${formatCurrency(off.price)}</strong>
+                        </span>
+                    `).join(' ')
+                    : `<span class="text-slate-400 italic text-[11px]">Henüz teklif girilmedi</span>`;
+
+                const tr = document.createElement('tr');
+                tr.className = `${idx % 2 === 1 ? 'bg-emerald-50/25' : 'bg-white'} hover:bg-emerald-50/70 transition`;
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3 font-bold text-slate-900">
+                        <div>${item.name}</div>
+                        <div class="text-[10px] font-normal text-slate-400">Stok: ${formatNumber(item.stock)} ${item.unit || 'ADET'}</div>
+                    </td>
+                    <td class="py-2.5 px-3 text-right whitespace-nowrap">
+                        <div class="font-bold text-slate-800">${formatCurrency(currentPrice)}</div>
+                        <div class="text-[10px] text-slate-400">${item.supplier || 'Tedarikçi yok'}</div>
+                    </td>
+                    <td class="py-2.5 px-3 whitespace-nowrap">
+                        ${bestOffer ? `<span class="inline-flex items-center gap-1 font-extrabold text-emerald-800"><i data-lucide="award" class="w-3.5 h-3.5 text-emerald-600"></i> ${bestOffer.supplier}</span>` : `<span class="text-slate-400">-</span>`}
+                    </td>
+                    <td class="py-2.5 px-3 text-right font-extrabold text-emerald-700 whitespace-nowrap">
+                        ${bestOffer ? formatCurrency(bestOffer.price) : '-'}
+                    </td>
+                    <td class="py-2.5 px-3 text-center whitespace-nowrap">
+                        ${diffHtml}
+                    </td>
+                    <td class="py-2.5 px-3">
+                        <div class="flex flex-wrap gap-1">${offersPills}</div>
+                    </td>
+                    <td class="py-2.5 px-3 text-right whitespace-nowrap no-print">
+                        <button onclick="openSupplierQuotesModal('${item.id}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-md transition cursor-pointer">
+                            + Teklif Ekle / Seç
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons();
+        };
+
+        // Tedarikçi Profili Ekleme / Düzenleme Modalı
+        window.openAddSupplierModal = function() {
+            document.getElementById('spOriginalName').value = '';
+            document.getElementById('spModalTitle').textContent = 'Yeni Tedarikçi Kartı Ekle';
+            document.getElementById('spName').value = '';
+            document.getElementById('spContactPerson').value = '';
+            document.getElementById('spPhone').value = '';
+            document.getElementById('spCity').value = '';
+            document.getElementById('spPaymentTerm').value = '';
+            document.getElementById('spNotes').value = '';
+            document.getElementById('supplierProfileModal').classList.remove('hidden');
+        };
+
+        window.openEditSupplierModal = function(supName) {
+            const existing = supplierProfiles.find(p => (p.name || '').trim().toLocaleLowerCase('tr-TR') === supName.trim().toLocaleLowerCase('tr-TR'));
+            document.getElementById('spOriginalName').value = supName;
+            document.getElementById('spModalTitle').textContent = 'Tedarikçi Kartını Düzenle';
+            document.getElementById('spName').value = existing?.name || supName;
+            document.getElementById('spContactPerson').value = existing?.contactPerson || '';
+            document.getElementById('spPhone').value = existing?.phone || '';
+            document.getElementById('spCity').value = existing?.city || '';
+            document.getElementById('spPaymentTerm').value = existing?.paymentTerm || '';
+            document.getElementById('spNotes').value = existing?.notes || '';
+            document.getElementById('supplierProfileModal').classList.remove('hidden');
+        };
+
+        window.handleSaveSupplierProfile = async function(e) {
+            e.preventDefault();
+            const originalName = document.getElementById('spOriginalName').value.trim();
+            const name = document.getElementById('spName').value.trim();
+            const contactPerson = document.getElementById('spContactPerson').value.trim();
+            const phone = document.getElementById('spPhone').value.trim();
+            const city = document.getElementById('spCity').value.trim();
+            const paymentTerm = document.getElementById('spPaymentTerm').value.trim();
+            const notes = document.getElementById('spNotes').value.trim();
+            if (!name) return;
+
+            const lookupKey = (originalName || name).toLocaleLowerCase('tr-TR');
+            const existingIdx = supplierProfiles.findIndex(p => (p.name || '').trim().toLocaleLowerCase('tr-TR') === lookupKey);
+            const payload = { name, contactPerson, phone, city, paymentTerm, notes, updatedAt: new Date().toISOString() };
+
+            try {
+                if (storageMode === 'CLOUD' && currentUser) {
+                    if (existingIdx !== -1 && supplierProfiles[existingIdx].id) {
+                        await updateDoc(doc(getSuppliersCol(), supplierProfiles[existingIdx].id), payload);
+                    } else {
+                        await addDoc(getSuppliersCol(), payload);
+                    }
+                } else {
+                    if (existingIdx !== -1) {
+                        supplierProfiles[existingIdx] = { ...supplierProfiles[existingIdx], ...payload };
+                    } else {
+                        supplierProfiles.push({ id: `sup_${Date.now()}`, ...payload });
+                    }
+                    saveLocalState();
+                    renderSuppliersPage();
+                }
+                closeModal('supplierProfileModal');
+                showToast(`"${name}" tedarikçi kartı kaydedildi.`);
+            } catch (err) {
+                console.error("Tedarikçi kayıt hatası:", err);
+                showToast("Tedarikçi kaydedilirken hata oluştu.", "error");
+            }
+        };
+
+        window.exportSuppliersCSV = function() {
+            let csv = "\uFEFF";
+            csv += "Sarf Malzemesi;Mevcut Aktif Tedarikçi;Aktif Birim Fiyat;En Uygun Tedarikçi;En Uygun Fiyat;Tüm Tedarikçi Teklifleri\n";
+
+            inventoryList.forEach(item => {
+                const mapBySup = new Map();
+                if (item.supplier && Number(item.unitPrice) > 0) {
+                    mapBySup.set(item.supplier.trim().toLocaleLowerCase('tr-TR'), { supplier: item.supplier.trim(), price: Number(item.unitPrice) });
+                }
+                (item.supplierQuotes || []).forEach(q => {
+                    if (q.supplier) {
+                        const k = q.supplier.trim().toLocaleLowerCase('tr-TR');
+                        const p = Number(q.price || 0);
+                        if (!mapBySup.has(k) || p < mapBySup.get(k).price) {
+                            mapBySup.set(k, { supplier: q.supplier.trim(), price: p });
+                        }
+                    }
+                });
+                const sorted = Array.from(mapBySup.values()).sort((a, b) => a.price - b.price);
+                const best = sorted[0];
+                const allStr = sorted.map(s => `${s.supplier}: ${s.price.toFixed(2).replace('.', ',')} TL`).join(' | ');
+
+                csv += [
+                    `"${item.name}"`,
+                    `"${item.supplier || ''}"`,
+                    Number(item.unitPrice || 0).toFixed(2).replace('.', ','),
+                    `"${best ? best.supplier : ''}"`,
+                    best ? best.price.toFixed(2).replace('.', ',') : '',
+                    `"${allStr}"`
+                ].join(";") + "\n";
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Yurga_Yemlik_Tedarikci_Karsilastirma_${new Date().toLocaleDateString('tr-TR').replace(/\./g, '_')}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast("Tedarikçi fiyat karşılaştırma tablosu CSV olarak indirildi.");
+        };
+
+        // Filtreleme Fonksiyonları
+        window.setCategoryFilter = function(cat) {
+            categoryFilter = cat;
+            document.querySelectorAll('.cat-filter-btn').forEach(btn => {
+                if (btn.getAttribute('data-cat') === cat) {
+                    btn.className = 'cat-filter-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white shadow-2xs whitespace-nowrap transition cursor-pointer';
+                } else {
+                    btn.className = 'cat-filter-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50/80 text-emerald-900 hover:bg-emerald-100 whitespace-nowrap transition cursor-pointer';
+                }
+            });
+            renderInventoryTable();
+        };
+
+        window.setStatusFilter = function(st) {
+            switchTab('inventory');
+            statusFilter = st;
+            document.querySelectorAll('.status-filter-btn').forEach(btn => {
+                if (btn.getAttribute('data-status') === st) {
+                    btn.className = 'status-filter-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-700 text-white transition cursor-pointer';
+                } else {
+                    btn.className = 'status-filter-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition cursor-pointer';
+                }
+            });
+            renderInventoryTable();
+        };
+
+        window.toggleCriticalFilter = function() {
+            switchTab('inventory');
+            if (statusFilter === 'CRITICAL') {
+                setStatusFilter('ALL');
+            } else {
+                setStatusFilter('CRITICAL');
+            }
+        };
+
+        window.clearSearch = function() {
+            searchQuery = '';
+            document.getElementById('searchInput').value = '';
+            document.getElementById('clearSearchBtn').classList.add('hidden');
+            renderInventoryTable();
+        };
+
+        window.resetAllFilters = function() {
+            clearSearch();
+            setCategoryFilter('ALL');
+            setStatusFilter('ALL');
+        };
+
+        window.sortInventory = function(field) {
+            if (sortField === field) {
+                sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortField = field;
+                sortDir = 'asc';
+            }
+            renderInventoryTable();
+        };
+
+        window.setHistoryTypeFilter = function(type) {
+            historyTypeFilter = type;
+            document.querySelectorAll('.hist-filter-btn').forEach(btn => {
+                if (btn.getAttribute('data-htype') === type) {
+                    btn.className = 'hist-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-700 text-white cursor-pointer';
+                } else {
+                    btn.className = 'hist-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 cursor-pointer';
+                }
+            });
+            renderHistoryTable();
+        };
+
+        // Excel / CSV Dışa Aktarma
+        window.exportInventoryCSV = function() {
+            const data = getFilteredInventory();
+            if (data.length === 0) {
+                showToast("Dışa aktarılacak stok verisi bulunamadı.", "warning");
+                return;
+            }
+
+            let csv = "\uFEFF";
+            csv += "Sıra;Malzeme Adı;Kategori;Aktif Tedarikçi;Mevcut Stok;Birim;Kritik Limit;Aktif Birim Fiyat (KDV Hariç);Toplam Stok Değeri (TL);Diğer Tedarikçi Teklifleri\n";
+
+            let grandTotal = 0;
+            data.forEach((item, index) => {
+                const stock = Number(item.stock || 0);
+                const price = Number(item.unitPrice || 0);
+                const val = stock * price;
+                grandTotal += val;
+
+                const quotesStr = (item.supplierQuotes || [])
+                    .map(q => `${q.supplier}: ${Number(q.price).toFixed(2).replace('.', ',')} TL`)
+                    .join(' | ');
+
+                csv += [
+                    index + 1,
+                    `"${item.name}"`,
+                    `"${item.category}"`,
+                    `"${item.supplier || ''}"`,
+                    stock,
+                    item.unit || 'ADET',
+                    item.criticalLimit || 0,
+                    price.toFixed(2).replace('.', ','),
+                    val.toFixed(2).replace('.', ','),
+                    `"${quotesStr}"`
+                ].join(";") + "\n";
+            });
+
+            csv += `\n;;;;;;;KDV Hariç Toplam Değer;${grandTotal.toFixed(2).replace('.', ',')}\n`;
+            csv += `;;;;;;;KDV Dahil (%20) Toplam;${(grandTotal * 1.2).toFixed(2).replace('.', ',')}\n`;
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Yurga_Yemlik_Sarf_Stok_${new Date().toLocaleDateString('tr-TR').replace(/\./g, '_')}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast("Güncel sarf stok listesi CSV (Excel) olarak indirildi.");
+        };
+
+        // Arama Dinleyicileri
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            searchQuery = e.target.value;
+            document.getElementById('clearSearchBtn').classList.toggle('hidden', searchQuery.length === 0);
+            renderInventoryTable();
+        });
+
+        document.getElementById('historySearchInput').addEventListener('input', (e) => {
+            historySearchQuery = e.target.value;
+            renderHistoryTable();
+        });
+
+        // Başlat
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            initApp();
+        });
+    </script>
+</body>
+</html>
